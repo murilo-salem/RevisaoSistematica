@@ -160,13 +160,14 @@ def analyze_and_chunk(
     overlap = analyzer_cfg.get("chunk_overlap", 50)
     sim_threshold = analyzer_cfg.get("similarity_threshold", 0.25)
     top_k = analyzer_cfg.get("top_k_tags", 3)
+    batch_size = analyzer_cfg.get("embedding_batch_size", 32)
 
     # Determine device
     sys_caps = cfg.get("system", {})
     device = "cuda" if sys_caps.get("cuda", False) else "cpu"
 
     # ---- Stage 3: Content analysis (load model) -------------------- #
-    logger.info("Loading embedding model '%s' on %s", model_name, device)
+    logger.info("Loading embedding model '%s' on %s (batch_size=%d)", model_name, device, batch_size)
     model = _load_model(model_name, device)
 
     # ---- Stage 4: Chunking ----------------------------------------- #
@@ -207,8 +208,8 @@ def analyze_and_chunk(
     chunk_texts = [c.text for c in all_chunks]
     prompt_texts = [e["prompt"] for e in taxonomy_entries]
 
-    chunk_embeds = _embed_texts(chunk_texts, model, desc="Embedding chunks")
-    prompt_embeds = _embed_texts(prompt_texts, model, desc="Embedding prompts")
+    chunk_embeds = _embed_texts(chunk_texts, model, batch_size=batch_size, desc="Embedding chunks")
+    prompt_embeds = _embed_texts(prompt_texts, model, batch_size=batch_size, desc="Embedding prompts")
 
     # Compute similarity matrix: (n_chunks, n_prompts)
     sim_matrix = _cosine_matrix(chunk_embeds, prompt_embeds)

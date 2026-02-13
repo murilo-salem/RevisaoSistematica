@@ -1,14 +1,16 @@
-"""
-main.py — CLI entry point for the systematic-review pipeline.
+"""main.py — CLI entry point for the systematic-review pipeline.
 
 Usage
 -----
 Online mode (requires Ollama + internet):
     python src/main.py --topic "effect of exercise on depression"
 
-Local / Offline mode (no LLM required for core flow):
+Local / Offline mode:
     python src/main.py --local
-    python src/main.py --local --taxonomy config/taxonomia.json
+    python src/main.py --local --taxonomy config/biodiesel_prompts.json
+
+High-end GPU profile (RTX 5090):
+    python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
 
 Resume a previous run:
     python src/main.py --resume
@@ -37,7 +39,8 @@ def main() -> None:
 Examples:
   Online:   python src/main.py --topic "effect of exercise on depression"
   Local:    python src/main.py --local
-  Local+T:  python src/main.py --local --taxonomy config/taxonomia.json
+  Local+T:  python src/main.py --local --taxonomy config/biodiesel_prompts.json
+  5090:     python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
   Resume:   python src/main.py --resume
 """,
     )
@@ -70,12 +73,29 @@ Examples:
         default=None,
         help="Path to taxonomy JSON file (default: config/taxonomia.json)",
     )
+    parser.add_argument(
+        "--profile", "-p",
+        type=str,
+        default=None,
+        help="Hardware profile: '5090' loads config/config_5090.yaml. "
+             "Overrides --config.",
+    )
 
     args = parser.parse_args()
 
+    # Resolve config path: --profile takes precedence over --config
+    config_path = args.config
+    if args.profile:
+        profile_path = f"config/config_{args.profile}.yaml"
+        config_path = profile_path
+        print(f"Using hardware profile: {args.profile} ({profile_path})")
+
     # Load configuration
-    cfg = load_config(args.config)
+    cfg = load_config(config_path)
     logger = setup_logging(cfg)
+
+    if args.profile:
+        logger.info("Hardware profile: %s", args.profile)
 
     # ---- System Check -------------------------------------------- #
     from utils import check_system_capabilities

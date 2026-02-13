@@ -5,12 +5,16 @@ Stages 7–8 of the local pipeline:
   7. Section Writing    — for each taxonomy entry, gather top chunks and
                           call the LLM to write that section
   8. Assemble Document  — combine sections in hierarchical order
+
+Supports **parallel writing** when ``review_writer.parallel_workers > 1``
+in config (requires Ollama ``OLLAMA_NUM_PARALLEL`` to match).
 """
 
 from __future__ import annotations
 
 import logging
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
 
 from tqdm import tqdm
@@ -112,8 +116,9 @@ def _write_section(
     parent: str,
     evidence: str,
     cfg: Dict[str, Any],
+    max_retries: int = 1,
 ) -> str:
-    """Call the LLM to write one section."""
+    """Call the LLM to write one section, with optional retries."""
     if evidence:
         llm_prompt = _SECTION_PROMPT.format(
             parent=parent,
@@ -128,11 +133,54 @@ def _write_section(
             prompt=prompt,
         )
 
-    try:
-        return call_llm(llm_prompt, cfg)
-    except Exception as exc:
-        logger.error("LLM failed for %s / %s: %s", parent, folder, exc)
-        return f"*[Section could not be generated: {exc}]*"
+    last_err = None
+    for attempt in range(max_retries + 1):
+        try:
+            return call_llm(llm_prompt, cfg)
+        except Exception as exc:
+            last_err = exc
+            if attempt < max_retries:
+                logger.warning(
+                    "LLM attempt %d/%d failed for %s / %s: %s — retrying",
+                    attempt + 1, max_retries + 1, parent, folder, exc,
+                )
+
+    logger.error("LLM failed for %s / %s after %d attempts: %s", parent, folder, max_retries + 1, last_err)
+    return f"*[Section could not be generated: {last_err}]*"
+
+
+def _write_single_entry(
+    entry: Dict[str, str],
+    all_tags: List[ChunkTag],
+    chunks_by_id: Dict[str, Chunk],
+    cfg: Dict[str, Any],
+    top_k_evidence: int,
+    max_retries: int,
+) -> Dict[str, Any]:
+    """Write a single section. Used as the unit of work for parallel execution."""
+    evidence = _gather_evidence(
+        entry["folder"], entry["parent"],
+        all_tags, chunks_by_id, top_k_evidence,
+    )
+
+    n_evidence = len(evidence.split("---")) if evidence else 0
+    logger.info(
+        "  Writing: %s / %s (%d evidence chunks)",
+        entry["parent"], entry["folder"], n_evidence,
+    )
+
+    content = _write_section(
+        entry["prompt"], entry["folder"], entry["parent"],
+        evidence, cfg, max_retries,
+    )
+
+    return {
+        "parent": entry["parent"],
+        "folder": entry["folder"],
+        "prompt": entry["prompt"],
+        "n_evidence": n_evidence,
+        "content": content,
+    }
 
 
 # ------------------------------------------------------------------ #
@@ -180,6 +228,8 @@ def write_review(
     """
     writer_cfg = cfg.get("review_writer", {})
     top_k_evidence = writer_cfg.get("top_k_evidence", 10)
+    parallel_workers = writer_cfg.get("parallel_workers", 1)
+    max_retries = writer_cfg.get("max_retries", 1)
 
     # Build lookup
     chunks_by_id = {c.chunk_id: c for c in all_chunks}
@@ -200,33 +250,56 @@ def write_review(
     )
 
     # ---- Stage 7: Write each section ------------------------------- #
-    logger.info("Writing %d sections via LLM", len(sorted_entries))
-    sections: List[Dict[str, Any]] = []
+    n = len(sorted_entries)
 
-    for entry in tqdm(sorted_entries, desc="Writing sections"):
-        evidence = _gather_evidence(
-            entry["folder"], entry["parent"],
-            all_tags, chunks_by_id, top_k_evidence,
-        )
-
-        n_evidence = len(evidence.split("---")) if evidence else 0
+    if parallel_workers > 1:
+        # ---- Parallel writing ---- #
         logger.info(
-            "  Writing: %s / %s (%d evidence chunks)",
-            entry["parent"], entry["folder"], n_evidence,
+            "Writing %d sections via LLM (%d parallel workers)",
+            n, parallel_workers,
         )
+        # We need to maintain order, so we map futures back to indices
+        sections: List[Dict[str, Any] | None] = [None] * n
 
-        content = _write_section(
-            entry["prompt"], entry["folder"], entry["parent"],
-            evidence, cfg,
-        )
+        with ThreadPoolExecutor(max_workers=parallel_workers) as executor:
+            future_to_idx = {}
+            for idx, entry in enumerate(sorted_entries):
+                future = executor.submit(
+                    _write_single_entry,
+                    entry, all_tags, chunks_by_id, cfg,
+                    top_k_evidence, max_retries,
+                )
+                future_to_idx[future] = idx
 
-        sections.append({
-            "parent": entry["parent"],
-            "folder": entry["folder"],
-            "prompt": entry["prompt"],
-            "n_evidence": n_evidence,
-            "content": content,
-        })
+            with tqdm(total=n, desc="Writing sections") as pbar:
+                for future in as_completed(future_to_idx):
+                    idx = future_to_idx[future]
+                    try:
+                        sections[idx] = future.result()
+                    except Exception as exc:
+                        entry = sorted_entries[idx]
+                        logger.error("Worker failed for %s / %s: %s", entry["parent"], entry["folder"], exc)
+                        sections[idx] = {
+                            "parent": entry["parent"],
+                            "folder": entry["folder"],
+                            "prompt": entry["prompt"],
+                            "n_evidence": 0,
+                            "content": f"*[Section failed: {exc}]*",
+                        }
+                    pbar.update(1)
+
+        # Filter out any None (shouldn't happen, but safety)
+        sections = [s for s in sections if s is not None]
+    else:
+        # ---- Sequential writing ---- #
+        logger.info("Writing %d sections via LLM (sequential)", n)
+        sections = []
+        for entry in tqdm(sorted_entries, desc="Writing sections"):
+            result = _write_single_entry(
+                entry, all_tags, chunks_by_id, cfg,
+                top_k_evidence, max_retries,
+            )
+            sections.append(result)
 
     # Save individual sections for later editing
     save_json(sections, "data/results/review_sections.json")
