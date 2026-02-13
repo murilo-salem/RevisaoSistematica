@@ -1,0 +1,76 @@
+# ============================================================
+# Systematic Review Pipeline — RTX 5090 / High-End Profile
+# ============================================================
+# Optimized for: 32GB VRAM, 64GB RAM, i9 13th gen
+# Usage: python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
+# ============================================================
+
+# ------ LLM Settings (70B model fits in 32GB VRAM) ------
+llm:
+  provider: ollama
+  base_url: "http://localhost:11434"
+  model: "llama3.1:70b"              # Upgrade from 8B → 70B
+  temperature: 0.2
+  seed: 42
+  timeout: 300                        # Longer timeout for bigger model
+
+# ------ Ollama Recommended Env Vars ------
+# Before running `ollama serve`, set:
+#   set OLLAMA_FLASH_ATTENTION=1
+#   set OLLAMA_NUM_PARALLEL=4
+#   set OLLAMA_CONTEXT_LENGTH=16384
+
+# ------ PubMed / Entrez Retrieval ------
+retrieval:
+  email: "your_email@example.com"
+  api_key: ""
+  max_results: 2000                   # Can handle more studies
+  batch_size: 100
+  db: "pubmed"
+
+# ------ Deduplication (larger, more accurate model) ------
+deduplication:
+  model: "all-mpnet-base-v2"          # 768-dim vs 384-dim (MiniLM)
+  similarity_threshold: 0.95
+
+# ------ Content Analyzer (stages 3-6) ------
+content_analyzer:
+  model: "all-mpnet-base-v2"
+  chunk_max_tokens: 600               # Larger chunks (4060: 400)
+  chunk_overlap: 100                  # More overlap (4060: 50)
+  similarity_threshold: 0.25
+  top_k_tags: 5                       # More tags per chunk (4060: 3)
+  embedding_batch_size: 256           # 8x larger batches (4060: 32)
+
+# ------ Review Writer (stages 7-8) ------
+review_writer:
+  top_k_evidence: 25                  # More evidence per section (4060: 10)
+  parallel_workers: 4                 # Write 4 sections at once
+  max_retries: 2                      # Retry failed sections
+
+# ------ Screening ------
+screening:
+  threshold_include: 0.75
+  threshold_exclude: 0.25
+
+# ------ Synthesis ------
+synthesis:
+  min_studies_for_meta: 3
+  confidence_level: 0.95
+
+# ------ Paths (relative to project root) ------
+paths:
+  database: "data/raw/studies.db"
+  prisma: "data/results/prisma.json"
+  extracted: "data/processed/extracted_data.json"
+  risk_of_bias: "data/processed/risk_of_bias.json"
+  pico: "data/processed/pico.json"
+  manuscript: "data/results/manuscript.tex"
+  audit_log: "data/results/audit.log"
+  pipeline_state: "data/results/pipeline_state.json"
+  forest_plot: "data/results/forest_plot.png"
+
+# ------ Versioning / Reproducibility ------
+version:
+  pipeline: "1.1.0"
+  config_hash: ""
