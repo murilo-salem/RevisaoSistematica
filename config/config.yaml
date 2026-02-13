@@ -1,0 +1,55 @@
+# ============================================================
+# Systematic Review Pipeline — Central Configuration
+# ============================================================
+# Every parameter that governs pipeline behaviour lives here.
+# Change values here instead of editing source code.
+# ============================================================
+
+# ------ LLM Settings ------
+llm:
+  provider: ollama                    # ollama | llamacpp
+  base_url: "http://localhost:11434"  # Ollama API endpoint
+  model: "llama3.1:8b"
+  temperature: 0.2
+  seed: 42
+  timeout: 120                        # seconds per request
+
+# ------ PubMed / Entrez Retrieval ------
+retrieval:
+  email: "your_email@example.com"     # REQUIRED by NCBI
+  api_key: ""                         # optional NCBI API key
+  max_results: 500
+  batch_size: 50                      # IDs per efetch call
+  db: "pubmed"
+
+# ------ Deduplication ------
+deduplication:
+  model: "all-MiniLM-L6-v2"
+  similarity_threshold: 0.95
+
+# ------ Screening ------
+screening:
+  threshold_include: 0.75
+  threshold_exclude: 0.25
+
+# ------ Synthesis ------
+synthesis:
+  min_studies_for_meta: 3             # minimum to attempt meta-analysis
+  confidence_level: 0.95
+
+# ------ Paths (relative to project root) ------
+paths:
+  database: "data/raw/studies.db"
+  prisma: "data/results/prisma.json"
+  extracted: "data/processed/extracted_data.json"
+  risk_of_bias: "data/processed/risk_of_bias.json"
+  pico: "data/processed/pico.json"
+  manuscript: "data/results/manuscript.tex"
+  audit_log: "data/results/audit.log"
+  pipeline_state: "data/results/pipeline_state.json"
+  forest_plot: "data/results/forest_plot.png"
+
+# ------ Versioning / Reproducibility ------
+version:
+  pipeline: "1.0.0"
+  config_hash: ""                     # auto-filled at runtime

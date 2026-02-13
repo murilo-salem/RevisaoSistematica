@@ -1,0 +1,197 @@
+[
+    {
+        "prompt": "Historical origins of biodiesel in France, World War II era, energy crisis revival, and modern environmental considerations.",
+        "folder": "Historical Development",
+        "parent": "Biodiesel Fundamentals"
+    },
+    {
+        "prompt": "Chemical composition, production methods, raw material diversity, and environmental motivations for biodiesel.",
+        "folder": "Basic Concepts",
+        "parent": "Biodiesel Fundamentals"
+    },
+    {
+        "prompt": "Global energy demand projections, fossil fuel dependence statistics, and comparative emissions data.",
+        "folder": "Energy Panorama",
+        "parent": "Biodiesel Fundamentals"
+    },
+    {
+        "prompt": "Positive characteristics (biodegradable, non-toxic, renewable), technical advantages (low sulfur, lubricity, flash point), current challenges, and global production trends.",
+        "folder": "Properties and Advantages",
+        "parent": "Biodiesel Fundamentals"
+    },
+    {
+        "prompt": "Feedstock availability issues, competition for agricultural land, economic subsidies, regulatory structure, market growth trends and obstacles.",
+        "folder": "Market Challenges",
+        "parent": "Biodiesel Fundamentals"
+    },
+    {
+        "prompt": "Overview of biodiesel synthesis: history of raw vegetable oil use, evolution of conversion processes, transesterification as main route, economic benefits, lipid source diversity, and fatty acid composition influence.",
+        "folder": "Synthesis Overview",
+        "parent": "Biodiesel Synthesis"
+    },
+    {
+        "prompt": "Chemical reaction mechanism of transesterification: triglyceride conversion steps, schematic representation, and effects of reaction conditions (catalyst, temperature, molar ratio).",
+        "folder": "Reaction Mechanism",
+        "parent": "Biodiesel Synthesis"
+    },
+    {
+        "prompt": "Principles of alkaline catalysis and feedstock requirements (low free fatty acids and moisture).",
+        "folder": "Alkaline Catalysis",
+        "parent": "Biodiesel Synthesis"
+    },
+    {
+        "prompt": "Fundamentals of acid catalysis for high-acidity oils, main catalysts (H2SO4, HCl), pretreatment applications, experimental parameters, and disadvantages (slower reaction, corrosiveness).",
+        "folder": "Acid Catalysis",
+        "parent": "Biodiesel Synthesis"
+    },
+    {
+        "prompt": "Objectives of biodiesel quality tests, regulatory agencies (ASTM, EN, ANP), historical standards development, compliance statistics, and specification parameters.",
+        "folder": "Quality Standards Overview",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Importance of kinematic viscosity in engine performance, relation to fatty acid chain length, test methods, and international specifications.",
+        "folder": "Kinematic Viscosity",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Definition and significance of flash point, relation to residual alcohol content, safety implications, handling, and test standards.",
+        "folder": "Flash Point",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Purpose of iodine value for measuring unsaturation, relation to oxidative stability, European specifications, and experimental determination method.",
+        "folder": "Iodine Value",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Saponification value as indicator of molecular weight, regulatory status, experimental method, and chemical reaction.",
+        "folder": "Saponification Value",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Importance of acid value for free fatty acid content, implications for catalyst selection, international standards, and test method.",
+        "folder": "Acid Value",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Density relation to fatty acid structure, engine performance implications, European specifications, and experimental determination.",
+        "folder": "Density",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Oxidative stability factors, impact on quality and storage, test equipment and methodology, and international standard requirements.",
+        "folder": "Oxidative Stability",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Glycerol as main byproduct, engine problems due to glycerol presence, and international standard limits.",
+        "folder": "Glycerol Content",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Principles and applications of thin layer chromatography (TLC) in biodiesel analysis, separation mechanism, experimental procedure, and visual comparison.",
+        "folder": "Thin Layer Chromatography",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Importance of gas chromatography in biodiesel analysis, determination of fatty acid composition, experimental parameters, and chromatogram interpretation.",
+        "folder": "Gas Chromatography",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Principles of flame ionization detector (FID), advantages in biodiesel analysis, specific applications with chromatograms, and limitations.",
+        "folder": "GC-FID",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Principles of mass spectrometry detector, advantages of GC-MS in biodiesel characterization, specific applications, and comparison with FID.",
+        "folder": "GC-MS",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Application of thermogravimetric analysis (TGA) in biodiesel quality assessment, thermal stability and decomposition profiles.",
+        "folder": "TGA",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Use of differential scanning calorimetry (DSC) for biodiesel analysis, measuring phase transitions and thermal properties.",
+        "folder": "DSC",
+        "parent": "Quality Control"
+    },
+    {
+        "prompt": "Edible vegetable oils (soybean, canola, sunflower, palm, peanut) as biodiesel feedstocks: advantages and limitations including food competition, cost, and availability.",
+        "folder": "Edible Vegetable Oils",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Animal fats (beef tallow, lard, chicken fat) for biodiesel: conversion performance, purification challenges, and environmental impact.",
+        "folder": "Animal Fats",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Used cooking oil (UCO) and industrial waste oils: pretreatment technologies, purification, and circular economy potential.",
+        "folder": "Waste Oils",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Insects as emerging lipid source: biotechnological potential, urban production, comparison with traditional feedstocks, economic and environmental perspectives, and sanitary/legal challenges.",
+        "folder": "Insect Lipids Overview",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Biodiesel production from insects: oil extraction methods (mechanical, solvents, supercritical CO2), effect of insect diet on oil quality, and catalytic conversion adaptations.",
+        "folder": "Insect Biodiesel Production",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Black soldier fly (Hermetia illucens) larvae: lipid yield by instar, fatty acid composition, cultivation technologies, transesterification studies, local production potential, and cost challenges.",
+        "folder": "Black Soldier Fly",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "House fly (Musca domestica) larvae: lipid yield by instar, fatty acid composition, cultivation, transesterification, local production potential, and challenges.",
+        "folder": "House Fly",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Yellow mealworm (Tenebrio molitor) larvae: lipid yield by instar, fatty acid composition, cultivation, transesterification, local production potential, and challenges.",
+        "folder": "Mealworm",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Scarab beetle larvae (e.g., Scarabaeus spp.): lipid yield by instar, fatty acid composition, cultivation, transesterification, local production potential, and challenges.",
+        "folder": "Scarab Beetle Larvae",
+        "parent": "Raw Materials"
+    },
+    {
+        "prompt": "Potential of alternative feedstocks to diversify energy matrix, reduce dependence on food crops, and enable local supply in urban areas.",
+        "folder": "Alternative Feedstocks Potential",
+        "parent": "Conclusion Synthesis"
+    },
+    {
+        "prompt": "Relevance of insects as lipid biomass: high fat yield per area, growth on low-cost substrates, circular economy integrating waste treatment and energy production.",
+        "folder": "Insect Relevance",
+        "parent": "Conclusion Synthesis"
+    },
+    {
+        "prompt": "Technical and economic challenges: standardization of extraction and transesterification, high cultivation costs, regulatory barriers.",
+        "folder": "Technical Challenges",
+        "parent": "Conclusion Synthesis"
+    },
+    {
+        "prompt": "Positive environmental impacts: reduced pressure on agricultural land, mitigation of emissions from organic waste disposal.",
+        "folder": "Environmental Impacts",
+        "parent": "Conclusion Synthesis"
+    },
+    {
+        "prompt": "Future perspectives and research needs: new species with higher lipid content, optimization of extraction and catalysis, life cycle assessment and economic viability.",
+        "folder": "Future Research",
+        "parent": "Conclusion Synthesis"
+    },
+    {
+        "prompt": "Contribution to sustainable energy transition: alignment with bioeconomy policies, interdisciplinary research, strategic role of emerging feedstocks.",
+        "folder": "Energy Transition",
+        "parent": "Conclusion Synthesis"
+    }
+]

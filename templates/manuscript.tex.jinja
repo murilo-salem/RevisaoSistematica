@@ -1,0 +1,79 @@
+% ============================================================
+%  Systematic Review — Auto-generated Manuscript
+%  Template: manuscript.tex.jinja
+% ============================================================
+\documentclass[12pt,a4paper]{article}
+
+% ------ Packages ------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{natbib}
+\usepackage{amsmath}
+
+% ------ Title ------
+\title{<< title >>}
+\author{Systematic Review Pipeline v1.0}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% ------ Abstract ------
+\begin{abstract}
+This systematic review was generated using an automated pipeline.
+A total of << n_studies >> studies were included in the final analysis.
+Please revise this abstract to reflect the key findings.
+\end{abstract}
+
+% ============================================================
+\section{Introduction}
+% ============================================================
+
+<< introduction >>
+
+% ============================================================
+\section{Methods}
+% ============================================================
+
+<< methods >>
+
+% ============================================================
+\section{Results}
+% ============================================================
+
+<< results >>
+
+<% if has_forest_plot %>
+\begin{figure}[htbp]
+  \centering
+  \includegraphics[width=\textwidth]{forest_plot.png}
+  \caption{Forest plot of included studies.}
+  \label{fig:forest}
+\end{figure}
+<% endif %>
+
+% ============================================================
+\section{Discussion}
+% ============================================================
+
+<< discussion >>
+
+% ============================================================
+\section*{References}
+% ============================================================
+
+% Replace [REF] placeholders with actual citations.
+% \bibliographystyle{apalike}
+% \bibliography{references}
+
+\end{document}
