@@ -9,7 +9,7 @@
 llm:
   provider: ollama                    # ollama | llamacpp
   base_url: "http://localhost:11434"  # Ollama API endpoint
-  model: "llama3.1:8b"
+  model: "qwen2.5:14b"
   temperature: 0.2
   seed: 42
   timeout: 120                        # seconds per request

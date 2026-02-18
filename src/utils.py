@@ -93,15 +93,24 @@ def setup_logging(cfg: Dict[str, Any]) -> logging.Logger:
 
 def call_llm(prompt: str, cfg: Dict[str, Any]) -> str:
     """Send *prompt* to the configured Ollama model and return the full
-    generated text.  Uses the ``/api/generate`` endpoint with streaming
-    disabled for simplicity.
+    generated text.
+
+    Uses the ``/api/generate`` endpoint with **streaming enabled** so that
+    the HTTP read-timeout applies to the gap *between* chunks rather than
+    to the total generation time.  This prevents timeouts when large models
+    (e.g. 70B) take several minutes to produce a full response.
+
+    Timeout behaviour (configurable via ``llm.timeout`` in config YAML):
+      • connect timeout  — fixed at 30 s (time to reach Ollama)
+      • read timeout      — ``llm.timeout`` seconds (max silence between
+        any two streamed chunks; default 120 s)
     """
     llm_cfg = cfg["llm"]
     url = f"{llm_cfg['base_url']}/api/generate"
     payload = {
         "model": llm_cfg["model"],
         "prompt": prompt,
-        "stream": False,
+        "stream": True,
         "options": {
             "temperature": llm_cfg["temperature"],
             "seed": llm_cfg["seed"],
@@ -111,10 +120,39 @@ def call_llm(prompt: str, cfg: Dict[str, Any]) -> str:
     logger = logging.getLogger("systematic_review.llm")
     logger.debug("LLM prompt (%d chars): %.200s…", len(prompt), prompt)
 
+    read_timeout = llm_cfg.get("timeout", 120)
+    connect_timeout = 30
+
+    logger.info(
+        "LLM request: model=%s, prompt_chars=%d, read_timeout=%ds",
+        llm_cfg["model"], len(prompt), read_timeout,
+    )
+
     try:
-        resp = requests.post(url, json=payload, timeout=llm_cfg.get("timeout", 120))
+        resp = requests.post(
+            url,
+            json=payload,
+            stream=True,
+            timeout=(connect_timeout, read_timeout),
+        )
         resp.raise_for_status()
-        text = resp.json().get("response", "")
+
+        chunks: list[str] = []
+        for line in resp.iter_lines(decode_unicode=True):
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            token = data.get("response", "")
+            if token:
+                chunks.append(token)
+            # Ollama signals completion with "done": true
+            if data.get("done", False):
+                break
+
+        text = "".join(chunks)
         logger.debug("LLM response (%d chars): %.200s…", len(text), text)
         return text
     except requests.RequestException as exc:

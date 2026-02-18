@@ -12,12 +12,12 @@ llm:
   model: "llama3.1:70b"              # Upgrade from 8B → 70B
   temperature: 0.2
   seed: 42
-  timeout: 300                        # Longer timeout for bigger model
+  timeout: 900                        # Max seconds of silence between streamed chunks
 
 # ------ Ollama Recommended Env Vars ------
 # Before running `ollama serve`, set:
 #   set OLLAMA_FLASH_ATTENTION=1
-#   set OLLAMA_NUM_PARALLEL=4
+#   set OLLAMA_NUM_PARALLEL=2
 #   set OLLAMA_CONTEXT_LENGTH=16384
 
 # ------ PubMed / Entrez Retrieval ------
@@ -45,7 +45,7 @@ content_analyzer:
 # ------ Review Writer (stages 7-8) ------
 review_writer:
   top_k_evidence: 25                  # More evidence per section (4060: 10)
-  parallel_workers: 4                 # Write 4 sections at once
+  parallel_workers: 2                 # 2 sections at once (70B needs more VRAM per request)
   max_retries: 2                      # Retry failed sections
 
 # ------ Screening ------

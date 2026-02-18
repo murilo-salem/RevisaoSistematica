@@ -59,6 +59,7 @@ Edit `config/config.yaml`:
 - Set `retrieval.email` to your real email (required by NCBI)
 - Optionally set `retrieval.api_key` for higher rate limits
 - Adjust `llm.model` if using a different Ollama model
+- source env/bin/activate
 
 ### Run
 

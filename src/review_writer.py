@@ -81,8 +81,11 @@ def _gather_evidence(
     all_tags: List[ChunkTag],
     chunks_by_id: Dict[str, Chunk],
     top_k: int = 10,
-) -> str:
-    """Collect the top-k most relevant chunks for a given section."""
+) -> tuple[str, int]:
+    """Collect the top-k most relevant chunks for a given section.
+
+    Returns ``(evidence_text, n_chunks)``.
+    """
     relevant = [
         t for t in all_tags
         if t.folder == folder and t.parent == parent
@@ -92,7 +95,7 @@ def _gather_evidence(
     relevant = relevant[:top_k]
 
     if not relevant:
-        return ""
+        return "", 0
 
     lines: List[str] = []
     seen_chunks = set()
@@ -107,7 +110,7 @@ def _gather_evidence(
                 f"{chunk.text}\n"
             )
 
-    return "\n---\n".join(lines)
+    return "\n---\n".join(lines), len(lines)
 
 
 def _write_section(
@@ -158,15 +161,14 @@ def _write_single_entry(
     max_retries: int,
 ) -> Dict[str, Any]:
     """Write a single section. Used as the unit of work for parallel execution."""
-    evidence = _gather_evidence(
+    evidence, n_evidence = _gather_evidence(
         entry["folder"], entry["parent"],
         all_tags, chunks_by_id, top_k_evidence,
     )
 
-    n_evidence = len(evidence.split("---")) if evidence else 0
     logger.info(
-        "  Writing: %s / %s (%d evidence chunks)",
-        entry["parent"], entry["folder"], n_evidence,
+        "  Writing: %s / %s (%d evidence chunks, ~%d chars)",
+        entry["parent"], entry["folder"], n_evidence, len(evidence),
     )
 
     content = _write_section(
