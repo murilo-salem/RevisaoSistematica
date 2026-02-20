@@ -49,7 +49,23 @@ paths:
   pipeline_state: "data/results/pipeline_state.json"
   forest_plot: "data/results/forest_plot.png"
 
+# ------ Review Writer ------
+review_writer:
+  top_k_evidence: 10
+  parallel_workers: 1
+  max_retries: 1
+  language: "pt"                      # Output language: "pt", "en", or "es"
+  evidence_pre_summarize: false       # Set true for higher quality (more LLM calls)
+  two_pass_writing: false             # Set true for draft→polish pipeline
+
+# ------ Post-Processing Synthesis Refinement ------
+post_processing:
+  enabled: true                        # set false to skip refinement
+  parallel_workers: 1                  # parallelism (match Ollama capacity)
+  max_retries: 1
+  preserve_v1: true                    # keep v1 backup file
+
 # ------ Versioning / Reproducibility ------
 version:
-  pipeline: "1.0.0"
+  pipeline: "1.2.0"
   config_hash: ""                     # auto-filled at runtime

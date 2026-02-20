@@ -107,14 +107,22 @@ def call_llm(prompt: str, cfg: Dict[str, Any]) -> str:
     """
     llm_cfg = cfg["llm"]
     url = f"{llm_cfg['base_url']}/api/generate"
+
+    # Build options dict — always include temperature + seed, then
+    # conditionally add advanced sampling knobs when present in config.
+    opts: Dict[str, Any] = {
+        "temperature": llm_cfg["temperature"],
+        "seed": llm_cfg["seed"],
+    }
+    for key in ("num_ctx", "top_p", "repeat_penalty"):
+        if key in llm_cfg:
+            opts[key] = llm_cfg[key]
+
     payload = {
         "model": llm_cfg["model"],
         "prompt": prompt,
         "stream": True,
-        "options": {
-            "temperature": llm_cfg["temperature"],
-            "seed": llm_cfg["seed"],
-        },
+        "options": opts,
     }
 
     logger = logging.getLogger("systematic_review.llm")
@@ -306,6 +314,12 @@ class ExtractionResult(BaseModel):
     ci_upper: Optional[float] = None
     p_value: Optional[float] = None
     notes: str = ""
+    # ---- Critical metadata (Épico 1) ----
+    study_scale: str = ""          # laboratory | pilot | industrial | field | simulation
+    geographic_scope: str = ""     # country / region described in the study
+    funding_source: str = ""       # funding body, if disclosed
+    conflict_of_interest: str = "" # COI statement, if disclosed
+    limitations: str = ""          # key limitations noted by the authors
 
 
 class RiskOfBiasItem(BaseModel):
@@ -319,6 +333,7 @@ class RiskOfBiasResult(BaseModel):
     """Full risk-of-bias assessment for one study."""
     pmid: str = ""
     domains: List[RiskOfBiasItem] = Field(default_factory=list)
+    overall_rating: str = ""  # low | moderate | high (computed heuristically)
 
 
 class TaxonomyEntry(BaseModel):
@@ -335,6 +350,8 @@ class Chunk(BaseModel):
     text: str
     start_char: int = 0
     end_char: int = 0
+    # Enriched metadata from extraction / risk-of-bias (Épico 1)
+    study_metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ChunkTag(BaseModel):
@@ -358,7 +375,7 @@ def now_iso() -> str:
 #  System Capabilities                                                 #
 # ------------------------------------------------------------------ #
 
-def check_system_capabilities() -> Dict[str, bool]:
+def check_system_capabilities(cfg: Dict[str, Any] | None = None) -> Dict[str, bool]:
     """Check for optional ML dependencies (torch, cuda, sentence-transformers).
     
     Returns a dict with:
@@ -374,11 +391,15 @@ def check_system_capabilities() -> Dict[str, bool]:
         "gpu_name": None
     }
     
+    force_cpu = False
+    if cfg and "system" in cfg:
+        force_cpu = cfg["system"].get("force_cpu", False)
+
     # Check PyTorch
     try:
         import torch
         caps["torch"] = True
-        if torch.cuda.is_available():
+        if not force_cpu and torch.cuda.is_available():
             # Try a small allocation to ensure drivers are actually working
             try:
                 _ = torch.zeros(1).cuda()

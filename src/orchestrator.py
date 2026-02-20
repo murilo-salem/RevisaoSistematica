@@ -219,7 +219,7 @@ def run_pipeline_local(
     taxonomy = load_taxonomy(taxonomy_path)
     topic = taxonomy.get("topic", "Local systematic review")
     is_outline = taxonomy.get("type") == "outline"
-    n_stages = 8 if is_outline else 5
+    n_stages = 10 if is_outline else 5
 
     cfg, state = _init(cfg, "LOCAL", topic)
     state["taxonomy_path"] = taxonomy_path or "config/taxonomia.json"
@@ -237,6 +237,17 @@ def run_pipeline_local(
     )
     save_json(pico.model_dump(), cfg["paths"]["pico"])
 
+    # ---- Stage 0: PDF Conversion (optional) ----------------------- #
+    pdf_input = _resolve(cfg.get("paths", {}).get("pdf_input", "data/pdfs"))
+    raw_dir = _resolve(cfg.get("paths", {}).get("raw_dir", "data/raw"))
+    
+    if pdf_input.exists():
+        from pdf_converter import convert_pdfs
+        logger.info("▶ Stage 0/9 — Checking for PDF documents")
+        n_conv = convert_pdfs(cfg, input_dir=pdf_input, output_dir=raw_dir)
+        if n_conv > 0:
+            logger.info("  ✓ Converted %d new PDFs to text", n_conv)
+    
     # ---- Stage 1: Load local articles ----------------------------- #
     logger.info("▶ Stage 1/%d — Loading local articles", n_stages)
     t0 = time.time()
@@ -321,11 +332,44 @@ def run_pipeline_local(
         state["stages"]["correlation"] = {"coverage": summary}
         _save_state(state, cfg)
 
-        # ---- Stage 7: Section Writing ------------------------------ #
-        logger.info("▶ Stage 7/%d — Section Writing", n_stages)
+        # ---- Stage 7: Evidence Synthesis (Épico 2) ------------------ #
+        logger.info("▶ Stage 7/%d — Evidence Synthesis", n_stages)
+        t0 = time.time()
+        from evidence_synthesizer import synthesize_all_themes
+        synthesis_maps = synthesize_all_themes(
+            entries, all_chunks, all_tags, studies, cfg,
+        )
+        elapsed = time.time() - t0
+        state["stages"]["evidence_synthesis"] = {
+            "elapsed_s": round(elapsed, 2),
+            "n_themes": len(synthesis_maps),
+            "n_consensus": sum(len(s.consensus_points) for s in synthesis_maps.values()),
+            "n_contradictions": sum(len(s.contradictions) for s in synthesis_maps.values()),
+            "n_gaps": sum(len(s.knowledge_gaps) for s in synthesis_maps.values()),
+        }
+        _save_state(state, cfg)
+        logger.info("  ✓ Synthesized %d themes in %.1fs", len(synthesis_maps), elapsed)
+
+        # ---- Stage 8: Organize into Folders ----------------------- #
+        logger.info("▶ Stage 8/%d — Organize into Folders", n_stages)
+        t0 = time.time()
+        from organizer import organize_by_taxonomy
+        organized_dir = organize_by_taxonomy(
+            all_chunks, all_tags, studies, entries, cfg,
+        )
+        elapsed = time.time() - t0
+        state["stages"]["organize"] = {
+            "elapsed_s": round(elapsed, 2),
+            "output_dir": organized_dir,
+        }
+        _save_state(state, cfg)
+        logger.info("  ✓ Organized into folders in %.1fs → %s", elapsed, organized_dir)
+
+        # ---- Stage 9: Section Writing ------------------------------ #
+        logger.info("▶ Stage 9/%d — Section Writing", n_stages)
         t0 = time.time()
         from review_writer import write_review
-        out_path = write_review(entries, all_chunks, all_tags, topic, cfg)
+        out_path = write_review(entries, all_chunks, all_tags, studies, topic, cfg, synthesis_maps)
         elapsed = time.time() - t0
 
         state["stages"]["section_writing"] = {
@@ -335,8 +379,8 @@ def run_pipeline_local(
         _save_state(state, cfg)
         logger.info("  ✓ Wrote %d sections in %.1fs", len(entries), elapsed)
 
-        # ---- Stage 8: Assemble Review ------------------------------ #
-        logger.info("▶ Stage 8/%d — Assemble Review (done)", n_stages)
+        # ---- Stage 10: Assemble Review ----------------------------- #
+        logger.info("▶ Stage 10/%d — Assemble Review (done)", n_stages)
         state["stages"]["assembly"] = {"output": out_path}
 
         state["finished_at"] = now_iso()

@@ -61,10 +61,17 @@ def _parse_llm_response(raw: str, topic: str) -> PICOModel:
 
     # Attempt 2 — regex fallback
     fields: Dict[str, str] = {}
+    # More robust regex for JSON fields in messy output
     for key in ("population", "intervention", "comparison", "outcome", "query"):
-        match = re.search(rf'"{key}"\s*:\s*"([^"]*)"', cleaned, re.IGNORECASE)
+        # Match "key": "value" or "key": value OR even "Key: value"
+        match = re.search(rf'"{key}"\s*:\s*["\']?(.*?)["\']?(\s*,\s*|\s*}})', cleaned, re.IGNORECASE | re.DOTALL)
         if match:
-            fields[key] = match.group(1)
+            fields[key] = match.group(1).strip()
+        else:
+            # Try plain text search if quoted JSON fails
+            match = re.search(rf'{key}\s*:\s*(.*)', cleaned, re.IGNORECASE)
+            if match:
+                fields[key] = match.group(1).split('\n')[0].strip()
 
     if fields:
         return PICOModel(topic=topic, **fields)

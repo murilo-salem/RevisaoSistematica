@@ -2,7 +2,12 @@
     {
         "prompt": "Historical origins of biodiesel in France, World War II era, energy crisis revival, and modern environmental considerations.",
         "folder": "Historical Development",
-        "parent": "Biodiesel Fundamentals"
+        "parent": "Biodiesel Fundamentals",
+        "research_questions": [
+            "Quais fatores históricos e geopolíticos impulsionaram o desenvolvimento do biodiesel como alternativa energética?",
+            "Como as propriedades técnicas e ambientais do biodiesel se comparam quantitativamente ao diesel fóssil?",
+            "Quais são os principais gargalos de mercado que impedem a expansão do biodiesel em escala global?"
+        ]
     },
     {
         "prompt": "Chemical composition, production methods, raw material diversity, and environmental motivations for biodiesel.",
@@ -27,7 +32,11 @@
     {
         "prompt": "Overview of biodiesel synthesis: history of raw vegetable oil use, evolution of conversion processes, transesterification as main route, economic benefits, lipid source diversity, and fatty acid composition influence.",
         "folder": "Synthesis Overview",
-        "parent": "Biodiesel Synthesis"
+        "parent": "Biodiesel Synthesis",
+        "research_questions": [
+            "Quais são as limitações da catálise alcalina para óleos com alto teor de ácidos graxos livres e como a catálise ácida as supera?",
+            "Como os parâmetros reacionais (temperatura, razão molar, concentração de catalisador) influenciam o rendimento e a qualidade do biodiesel?"
+        ]
     },
     {
         "prompt": "Chemical reaction mechanism of transesterification: triglyceride conversion steps, schematic representation, and effects of reaction conditions (catalyst, temperature, molar ratio).",
@@ -47,7 +56,12 @@
     {
         "prompt": "Objectives of biodiesel quality tests, regulatory agencies (ASTM, EN, ANP), historical standards development, compliance statistics, and specification parameters.",
         "folder": "Quality Standards Overview",
-        "parent": "Quality Control"
+        "parent": "Quality Control",
+        "research_questions": [
+            "Quais parâmetros fisico-químicos são mais críticos para garantir a qualidade do biodiesel e por quê?",
+            "Como as diferentes técnicas analíticas (GC-FID, GC-MS, TGA, DSC) se complementam na avaliação da qualidade?",
+            "Existem divergências significativas entre normas internacionais (ASTM, EN) e nacionais (ANP) para os mesmos parâmetros?"
+        ]
     },
     {
         "prompt": "Importance of kinematic viscosity in engine performance, relation to fatty acid chain length, test methods, and international specifications.",
@@ -122,7 +136,12 @@
     {
         "prompt": "Edible vegetable oils (soybean, canola, sunflower, palm, peanut) as biodiesel feedstocks: advantages and limitations including food competition, cost, and availability.",
         "folder": "Edible Vegetable Oils",
-        "parent": "Raw Materials"
+        "parent": "Raw Materials",
+        "research_questions": [
+            "Quais matérias-primas não convencionais apresentam maior viabilidade técnico-econômica para substituir óleos vegetais comestíveis na produção de biodiesel?",
+            "Como o rendimento lipídico e a composição de ácidos graxos de insetos se comparam com fontes convencionais de biodiesel?",
+            "Quais barreiras regulatórias e de escala limitam a adoção comercial de lipídios de insetos como matéria-prima?"
+        ]
     },
     {
         "prompt": "Animal fats (beef tallow, lard, chicken fat) for biodiesel: conversion performance, purification challenges, and environmental impact.",
@@ -167,7 +186,11 @@
     {
         "prompt": "Potential of alternative feedstocks to diversify energy matrix, reduce dependence on food crops, and enable local supply in urban areas.",
         "folder": "Alternative Feedstocks Potential",
-        "parent": "Conclusion Synthesis"
+        "parent": "Conclusion Synthesis",
+        "research_questions": [
+            "As evidências atuais sustentam a viabilidade da produção de biodiesel a partir de insetos em escala industrial?",
+            "Quais lacunas de conhecimento são mais urgentes de preencher para viabilizar matérias-primas alternativas?"
+        ]
     },
     {
         "prompt": "Relevance of insects as lipid biomass: high fat yield per area, growth on low-cost substrates, circular economy integrating waste treatment and energy production.",

@@ -136,6 +136,7 @@ def analyze_and_chunk(
     studies: List[StudyRecord],
     taxonomy_entries: List[Dict[str, str]],
     cfg: Dict[str, Any],
+    study_metadata: Dict[str, Dict[str, Any]] | None = None,
 ) -> Tuple[List[Chunk], List[ChunkTag], Dict[str, Any]]:
     """Run stages 3–6: chunk articles, embed, tag, and report.
 
@@ -154,6 +155,8 @@ def analyze_and_chunk(
     tags   : list[ChunkTag]
     coverage : dict   — per-section coverage statistics
     """
+    if study_metadata is None:
+        study_metadata = {}
     analyzer_cfg = cfg.get("content_analyzer", {})
     model_name = analyzer_cfg.get("model", "all-MiniLM-L6-v2")
     max_tokens = analyzer_cfg.get("chunk_max_tokens", 400)
@@ -188,6 +191,7 @@ def analyze_and_chunk(
                 text=full_text,
                 start_char=0,
                 end_char=len(full_text),
+                study_metadata=study_metadata.get(study.pmid, {}),
             ))
         else:
             for i, (text, sc, ec) in enumerate(raw_chunks):
@@ -198,6 +202,7 @@ def analyze_and_chunk(
                     text=text,
                     start_char=sc,
                     end_char=ec,
+                    study_metadata=study_metadata.get(study.pmid, {}),
                 ))
 
     logger.info("Created %d chunks from %d articles", len(all_chunks), len(studies))

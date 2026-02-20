@@ -11,3 +11,5 @@ scipy
 tqdm
 pyyaml
 biopython
+PyMuPDF
+pdfminer.six

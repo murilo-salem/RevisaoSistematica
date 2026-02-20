@@ -40,8 +40,23 @@ ONLY a valid JSON object.  If a value is not available, use null.
   "ci_lower": <float or null>,
   "ci_upper": <float or null>,
   "p_value": <float or null>,
-  "notes": "<any relevant comments>"
+  "notes": "<any relevant comments>",
+  "study_scale": "laboratory | pilot | industrial | field | simulation | null",
+  "geographic_scope": "<country or region where the study was conducted, or null>",
+  "funding_source": "<funding body or grant, or null if not disclosed>",
+  "conflict_of_interest": "<COI statement, or null if not disclosed>",
+  "limitations": "<key limitations stated by the authors, or null>"
 }}
+
+### Extraction guidance
+- **study_scale**: Infer from the methodology. If the study describes
+  bench-scale experiments, use "laboratory". If it mentions scale-up
+  or larger reactors, use "pilot" or "industrial". Field trials = "field".
+  Computational/modeling work = "simulation".
+- **geographic_scope**: Look for author affiliations, study sites, or
+  geographic references in the text.
+- **limitations**: Summarise in one sentence the main limitations
+  acknowledged by the authors.
 
 ### Study
 Title: {title}

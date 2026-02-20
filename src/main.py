@@ -12,6 +12,9 @@ Local / Offline mode:
 High-end GPU profile (RTX 5090):
     python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
 
+Multi-agent mode:
+    python src/main.py --local --multi-agent --taxonomy config/biodiesel_prompts.json
+
 Resume a previous run:
     python src/main.py --resume
 
@@ -41,6 +44,7 @@ Examples:
   Local:    python src/main.py --local
   Local+T:  python src/main.py --local --taxonomy config/biodiesel_prompts.json
   5090:     python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
+  Agents:   python src/main.py --local --multi-agent --taxonomy config/biodiesel_prompts.json
   Resume:   python src/main.py --resume
 """,
     )
@@ -80,6 +84,17 @@ Examples:
         help="Hardware profile: '5090' loads config/config_5090.yaml. "
              "Overrides --config.",
     )
+    parser.add_argument(
+        "--cpu",
+        action="store_true",
+        help="Force CPU-only mode (bypasses GPU detection)",
+    )
+    parser.add_argument(
+        "--multi-agent", "-m",
+        action="store_true",
+        help="Use the multi-agent pipeline with iterative review loops "
+             "(requires --local mode)",
+    )
 
     args = parser.parse_args()
 
@@ -92,6 +107,11 @@ Examples:
 
     # Load configuration
     cfg = load_config(config_path)
+
+    # Force CPU if requested
+    if args.cpu:
+        cfg.setdefault("system", {})["force_cpu"] = True
+
     logger = setup_logging(cfg)
 
     if args.profile:
@@ -99,7 +119,7 @@ Examples:
 
     # ---- System Check -------------------------------------------- #
     from utils import check_system_capabilities
-    caps = check_system_capabilities()
+    caps = check_system_capabilities(cfg)
     cfg["system"] = caps
 
     logger.info("System Capabilities:")
@@ -107,14 +127,21 @@ Examples:
     logger.info("  • CUDA (GPU):          %s", f"✅ ({caps['gpu_name']})" if caps["cuda"] else "❌")
     logger.info("  • SentenceTransformers: %s", "✅" if caps["sentence_transformers"] else "❌")
 
-    if not caps["cuda"]:
+    if args.cpu:
+        logger.info("  • Mode:                Manual CPU Override")
+    elif not caps["cuda"]:
         logger.warning("No GPU detected or PyTorch not available. ML features will run on CPU or be disabled.")
 
     # ---- Local / Offline mode ------------------------------------ #
     if args.local:
-        logger.info("Running in LOCAL mode")
-        from orchestrator import run_pipeline_local
-        run_pipeline_local(taxonomy_path=args.taxonomy, cfg=cfg)
+        if getattr(args, 'multi_agent', False):
+            logger.info("Running in LOCAL + MULTI-AGENT mode")
+            from agents.pipeline import run_multi_agent_pipeline
+            run_multi_agent_pipeline(taxonomy_path=args.taxonomy, cfg=cfg)
+        else:
+            logger.info("Running in LOCAL mode")
+            from orchestrator import run_pipeline_local
+            run_pipeline_local(taxonomy_path=args.taxonomy, cfg=cfg)
         return
 
     # ---- Resume mode --------------------------------------------- #

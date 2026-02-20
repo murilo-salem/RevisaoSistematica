@@ -26,6 +26,52 @@ logger = logging.getLogger("systematic_review.local_loader")
 
 
 # ------------------------------------------------------------------ #
+#  Filename metadata extraction                                        #
+# ------------------------------------------------------------------ #
+
+def _parse_filename_metadata(stem: str) -> Dict[str, Any]:
+    """Extract author and year from a filename stem.
+
+    Examples
+    --------
+    >>> _parse_filename_metadata('A._Saravanan_2019')
+    {'author': 'A. Saravanan', 'year': 2019}
+    >>> _parse_filename_metadata('Brandon_Han_Hoe_Goh_2019')
+    {'author': 'Brandon Han Hoe Goh', 'year': 2019}
+    >>> _parse_filename_metadata('unknown_file')
+    {'author': 'unknown file', 'year': None}
+    """
+    # Try to find a trailing 4-digit year
+    m = re.match(r'^(.+?)_?(\d{4})$', stem)
+    if m:
+        raw_author = m.group(1)
+        year = int(m.group(2))
+    else:
+        raw_author = stem
+        year = None
+
+    # Replace underscores with spaces, fix "A." patterns
+    author = raw_author.replace('_', ' ').strip()
+    # Collapse double spaces
+    author = re.sub(r'\s+', ' ', author)
+
+    return {'author': author, 'year': year}
+
+
+def _format_citation(author: str, year: int | None) -> str:
+    """Format an in-text citation.
+
+    >>> _format_citation('A. Saravanan', 2019)
+    '(A. Saravanan, 2019)'
+    >>> _format_citation('A. Saravanan', None)
+    '(A. Saravanan)'
+    """
+    if year:
+        return f"({author}, {year})"
+    return f"({author})"
+
+
+# ------------------------------------------------------------------ #
 #  Format-specific loaders                                             #
 # ------------------------------------------------------------------ #
 
@@ -39,10 +85,13 @@ def _load_txt_files(raw_dir: Path) -> List[StudyRecord]:
         title = lines[0] if lines else txt.stem
         abstract = "\n".join(lines[1:]) if len(lines) > 1 else content
 
+        meta = _parse_filename_metadata(txt.stem)
         records.append(StudyRecord(
             pmid=txt.stem,
             title=title,
             abstract=abstract,
+            authors=meta["author"],
+            year=meta["year"],
             raw_text=content,
         ))
     return records
@@ -151,7 +200,6 @@ def _parse_taxonomy_md(content: str) -> Dict[str, Any]:
             
         # Topic (H1)
         if line.startswith("# "):
-            # remove '# ' and optionally 'Topic: '
             val = line[2:].strip()
             if val.lower().startswith("topic:"):
                 val = val[6:].strip()
@@ -163,28 +211,27 @@ def _parse_taxonomy_md(content: str) -> Dict[str, Any]:
             sec = line[3:].lower().strip()
             if "pico" in sec: current_section = "pico"
             elif "keyword" in sec: current_section = "keywords"
-            elif "inclusion" in sec: current_section = "inclusion_criteria"
-            elif "exclusion" in sec: current_section = "exclusion_criteria"
-            elif "classification" in sec or "rules" in sec: current_section = "classification_rules"
+            elif "criteria" in sec or "rule" in sec:
+                if "inclusion" in sec: current_section = "inclusion_criteria"
+                elif "exclusion" in sec: current_section = "exclusion_criteria"
+                else: current_section = "classification_rules"
             else: current_section = None
             continue
             
         # Lists
-        if line.startswith("- ") or line.startswith("* "):
-            item = line[2:].strip()
+        if line.startswith("- ") or line.startswith("* ") or (line[0].isdigit() and line[1:3] == ". "):
+            # strip bullet
+            item = re.sub(r'^(\s*[-*+]|\s*\d+\.)\s+', '', line).strip()
             
             if current_section == "pico":
-                # Expect 'Key: Value'
                 if ":" in item:
                     k, v = item.split(":", 1)
-                    k = k.strip().lower()
-                    taxonomy["pico"][k] = v.strip()
+                    taxonomy["pico"][k.strip().lower()] = v.strip()
                     
             elif current_section in ["keywords", "inclusion_criteria", "exclusion_criteria"]:
                 taxonomy[current_section].append(item)
                 
             elif current_section == "classification_rules":
-                # heuristic: if line contains 'include', put in include_if_any
                 if "include" in item.lower() and "exclude" not in item.lower():
                     taxonomy["classification_rules"]["include_if_any"].append(item)
                 else:

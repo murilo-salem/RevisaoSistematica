@@ -5,20 +5,23 @@
 # Usage: python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
 # ============================================================
 
-# ------ LLM Settings (70B model fits in 32GB VRAM) ------
+# ------ LLM Settings (32B model — best quality/speed for 32GB VRAM) ------
 llm:
   provider: ollama
   base_url: "http://localhost:11434"
-  model: "llama3.1:70b"              # Upgrade from 8B → 70B
+  model: "gemma3:4b"              # Excellent quality, fits 32GB with room for parallelism
   temperature: 0.2
   seed: 42
   timeout: 900                        # Max seconds of silence between streamed chunks
+  num_ctx: 32768                      # Larger context window for richer evidence
+  top_p: 0.9                          # Nucleus sampling for more natural text
+  repeat_penalty: 1.15                # Reduce repetitive phrasing
 
 # ------ Ollama Recommended Env Vars ------
 # Before running `ollama serve`, set:
-#   set OLLAMA_FLASH_ATTENTION=1
-#   set OLLAMA_NUM_PARALLEL=2
-#   set OLLAMA_CONTEXT_LENGTH=16384
+#   export OLLAMA_FLASH_ATTENTION=1
+#   export OLLAMA_NUM_PARALLEL=3
+#   export OLLAMA_CONTEXT_LENGTH=32768
 
 # ------ PubMed / Entrez Retrieval ------
 retrieval:
@@ -45,8 +48,18 @@ content_analyzer:
 # ------ Review Writer (stages 7-8) ------
 review_writer:
   top_k_evidence: 25                  # More evidence per section (4060: 10)
-  parallel_workers: 2                 # 2 sections at once (70B needs more VRAM per request)
+  parallel_workers: 3                 # 3 sections at once (32B uses less VRAM than 70B)
   max_retries: 2                      # Retry failed sections
+  language: "pt"                      # Output language: "pt", "en", or "es"
+  evidence_pre_summarize: true        # Summarize evidence before section writing
+  two_pass_writing: true              # Draft → Polish pipeline
+
+# ------ Post-Processing Synthesis Refinement ------
+post_processing:
+  enabled: true
+  parallel_workers: 3                 # Match review_writer parallelism
+  max_retries: 2
+  preserve_v1: true                   # Keep v1 backup file
 
 # ------ Screening ------
 screening:
@@ -70,7 +83,25 @@ paths:
   pipeline_state: "data/results/pipeline_state.json"
   forest_plot: "data/results/forest_plot.png"
 
+# ------ Multi-Agent System ------
+multi_agent:
+  enabled: false                     # set to true or use --multi-agent flag
+  max_iterations: 3                  # max write→review iterations per section
+  quality_threshold: 7.0             # minimum review score to accept a section
+  parallel_themes: 2                 # concurrent theme processing
+  write_retries: 1                   # retries per LLM write call
+  debate_enabled: true               # enable debate for controversial themes
+  debate_controversy_threshold: 2    # min contradictions to trigger debate
+  agent_models:                      # per-agent model overrides (null = use global)
+    extraction: ~                    # lightweight is fine
+    mapping: ~
+    critical: ~                      # consider "qwen2.5:14b" for deeper reasoning
+    synthesis: ~
+    writing: ~
+    review: ~
+    debate: ~
+
 # ------ Versioning / Reproducibility ------
 version:
-  pipeline: "1.1.0"
+  pipeline: "1.3.0"
   config_hash: ""

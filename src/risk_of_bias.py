@@ -81,6 +81,21 @@ def _parse_rob(raw: str, pmid: str) -> RiskOfBiasResult:
     )
 
 
+def _compute_overall_rating(rob: RiskOfBiasResult) -> str:
+    """Heuristic overall risk-of-bias rating from domain ratings.
+
+    - Any domain rated 'high' → overall 'high'
+    - Two or more domains 'unclear' → overall 'moderate'
+    - Otherwise → overall 'low'
+    """
+    ratings = [d.rating.lower().strip() for d in rob.domains]
+    if "high" in ratings:
+        return "high"
+    if ratings.count("unclear") >= 2:
+        return "moderate"
+    return "low"
+
+
 # ------------------------------------------------------------------ #
 #  Public API                                                          #
 # ------------------------------------------------------------------ #
@@ -112,6 +127,7 @@ def assess_risk_of_bias(
 
         raw = call_llm(prompt, cfg)
         rob = _parse_rob(raw, study.pmid)
+        rob.overall_rating = _compute_overall_rating(rob)
         results.append(rob)
 
     save_json(
