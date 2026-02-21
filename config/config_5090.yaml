@@ -5,11 +5,11 @@
 # Usage: python src/main.py --local --profile 5090 --taxonomy config/biodiesel_prompts.json
 # ============================================================
 
-# ------ LLM Settings (32B model — best quality/speed for 32GB VRAM) ------
+# ------ LLM Settings ------
 llm:
   provider: ollama
   base_url: "http://localhost:11434"
-  model: "gemma3:4b"              # Excellent quality, fits 32GB with room for parallelism
+  model: "qwen3:8b"               # Default model for general tasks
   temperature: 0.2
   seed: 42
   timeout: 900                        # Max seconds of silence between streamed chunks
@@ -93,13 +93,13 @@ multi_agent:
   debate_enabled: true               # enable debate for controversial themes
   debate_controversy_threshold: 2    # min contradictions to trigger debate
   agent_models:                      # per-agent model overrides (null = use global)
-    extraction: ~                    # lightweight is fine
+    extraction: ~                    # lightweight — uses default qwen3:8b
     mapping: ~
-    critical: ~                      # consider "qwen2.5:14b" for deeper reasoning
-    synthesis: ~
+    critical: "mixtral:8x22b"        # complex reasoning for comparative analysis
+    synthesis: "mixtral:8x22b"       # complex reasoning for thesis + agenda
     writing: ~
     review: ~
-    debate: ~
+    debate: "mixtral:8x22b"          # complex reasoning for debate sections
 
 # ------ Versioning / Reproducibility ------
 version:

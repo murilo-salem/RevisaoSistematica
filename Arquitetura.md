@@ -1,7 +1,9 @@
 # Arquitetura do Sistema — Revisão Sistemática Automatizada
 
 > Pipeline completo para conduzir revisões sistemáticas da literatura usando
-> LLMs locais (Ollama), embeddings semânticos e análise de conteúdo.
+> LLMs locais (Ollama), embeddings semânticos, análise de conteúdo e um
+> **sistema multi-agente** com análise crítica, detecção de tabelas e
+> consolidação de agenda de pesquisa.
 
 ---
 
@@ -10,8 +12,8 @@
 - [Visão Geral](#visão-geral)
 - [Estrutura de Diretórios](#estrutura-de-diretórios)
 - [Modos de Operação](#modos-de-operação)
-- [Diagrama de Fluxo](#diagrama-de-fluxo)
-- [Componentes Principais](#componentes-principais)
+- [Diagrama de Fluxo — Pipeline Clássica](#diagrama-de-fluxo--pipeline-clássica)
+- [Componentes Clássicos](#componentes-clássicos)
   - [Entrada e CLI](#1-entrada-e-cli--mainpy)
   - [Orquestrador](#2-orquestrador--orchestratorpy)
   - [Conversão PDF→Texto](#3-conversão-pdftexto--pdf_converterpy)
@@ -30,6 +32,22 @@
   - [Utilitários](#16-utilitários--utilspy)
   - [Construção de Query](#17-construção-de-query--query_builderpy)
   - [Recuperação do PubMed](#18-recuperação-do-pubmed--retrievalpy)
+- [**Sistema Multi-Agente**](#sistema-multi-agente)
+  - [Visão Geral do Sistema](#visão-geral-do-sistema)
+  - [Arquitetura de Agentes](#arquitetura-de-agentes)
+  - [Protocolo de Mensagens](#protocolo-de-mensagens)
+  - [Blackboard (Memória Compartilhada)](#blackboard--memória-compartilhada)
+  - [Coordinator Agent](#coordinator-agent)
+  - [Extraction Agent](#extraction-agent)
+  - [Mapping Agent](#mapping-agent)
+  - [Critical Agent](#critical-agent)
+  - [Synthesis Agent](#synthesis-agent)
+  - [Writing Agent](#writing-agent)
+  - [Review Agent](#review-agent)
+  - [Debate Agent](#debate-agent)
+  - [Formatting Agent](#formatting-agent)
+  - [Módulos de Suporte](#módulos-de-suporte)
+  - [Diagrama de Fluxo — Multi-Agente](#diagrama-de-fluxo--multi-agente)
 - [Configuração](#configuração)
 - [Modelos de Dados](#modelos-de-dados)
 - [Sistema de Qualidade Textual](#sistema-de-qualidade-textual)
@@ -44,13 +62,16 @@ O sistema automatiza todas as etapas de uma revisão sistemática da literatura:
 2. **Deduplicação** semântica ou por título
 3. **Triagem** via LLM ou taxonomia de palavras-chave
 4. **Análise de conteúdo** — chunking + embeddings + mapeamento por seção
-5. **Escrita** da revisão com prompts encadeados (chain-of-thought)
+5. **Sistema Multi-Agente** — extração, análise crítica comparativa, síntese
+   com tese e lacunas, escrita iterativa com revisão, debate de controvérsias
 6. **Pós-processamento** — refinamento narrativo, coerência e limpeza textual
-7. **Exportação** para Markdown, LaTeX e PDF
+7. **Integração automática** — tabelas comparativas, agenda de pesquisa consolidada
+8. **Exportação** para Markdown, LaTeX e PDF
 
-A infraestrutura LLM é fornecida pelo **Ollama** (modelos locais como
-`qwen2.5:14b`, `gemma3:4b`). Embeddings semânticos são gerados por
-**SentenceTransformers** (`all-MiniLM-L6-v2` ou `all-mpnet-base-v2`).
+A infraestrutura LLM é fornecida pelo **Ollama** com modelos configuráveis
+por agente: `qwen3:8b` para tarefas gerais e `mixtral:8x22b` para raciocínio
+complexo (análise crítica, síntese, debate). Embeddings semânticos são gerados
+por **SentenceTransformers** (`all-mpnet-base-v2`).
 
 ---
 
@@ -73,7 +94,7 @@ RevisaoSistematica/
 │
 ├── src/
 │   ├── main.py                  # CLI — ponto de entrada
-│   ├── orchestrator.py          # Coordena todos os estágios do pipeline
+│   ├── orchestrator.py          # Coordena pipeline clássica (sem multi-agente)
 │   ├── pdf_converter.py         # PDF → texto (PyMuPDF / pdfminer)
 │   ├── local_loader.py          # Carrega artigos locais + taxonomia
 │   ├── deduplication.py         # Deduplicação semântica / exata
@@ -89,7 +110,27 @@ RevisaoSistematica/
 │   ├── md2latex.py              # Converte Markdown → LaTeX
 │   ├── query_builder.py         # Gera PICO + query booleana (LLM)
 │   ├── retrieval.py             # Busca no PubMed via Entrez
-│   └── utils.py                 # Config, LLM, DB, modelos Pydantic
+│   ├── utils.py                 # Config, LLM, DB, modelos Pydantic
+│   │
+│   ├── concept_registry.py      # Registro de conceitos já explicados (anti-redundância)
+│   ├── evidence_synthesizer.py  # Análise consenso / contradição / lacunas por tema
+│   ├── table_generator.py       # Detecção e geração automática de tabelas comparativas
+│   │
+│   └── agents/                  # ★ SISTEMA MULTI-AGENTE ★
+│       ├── __init__.py
+│       ├── base_agent.py        # Classes base (Message, AgentResult, BaseAgent)
+│       ├── blackboard.py        # Memória compartilhada entre agentes
+│       ├── pipeline.py          # Ponto de entrada do modo multi-agente
+│       ├── coordinator_agent.py # Orquestra todos os agentes (8 fases)
+│       ├── extraction_agent.py  # Extração de dados estruturados (PICO, metadata)
+│       ├── mapping_agent.py     # Mapeamento evidência → taxonomia
+│       ├── critical_agent.py    # Análise crítica + comparativa entre estudos
+│       ├── synthesis_agent.py   # Síntese: tese + lacunas agrupadas + agenda
+│       ├── writing_agent.py     # Escrita de seções com ConceptRegistry
+│       ├── review_agent.py      # Revisão com redundância cross-section
+│       ├── debate_agent.py      # Debate estruturado para temas controversos
+│       ├── formatting_agent.py  # Montagem final + tabelas + agenda
+│       └── models.py            # Modelos Pydantic dos agentes
 │
 ├── templates/
 │   └── manuscript.tex.jinja     # Template LaTeX (Jinja2)
@@ -102,22 +143,24 @@ RevisaoSistematica/
 
 ## Modos de Operação
 
-O sistema possui **três modos**, todos coordenados por `orchestrator.py`:
+O sistema possui **quatro modos**, coordenados por `orchestrator.py` (clássico) ou
+`agents/pipeline.py` (multi-agente):
 
 | Modo | Comando | Descrição |
 |------|---------|-----------|
 | **Online** | `python src/main.py --topic "..."` | LLM gera PICO → busca PubMed → Triagem → Extração → Síntese → Manuscrito LaTeX |
 | **Local Outline** | `python src/main.py --local --taxonomy config/biodiesel_prompts.json` | Carrega artigos locais → Análise de conteúdo → Escrita por seções → Markdown |
 | **Local Keyword** | `python src/main.py --local` | Carrega artigos → Triagem por taxonomia → Extração → Síntese |
+| **★ Multi-Agente** | `python src/main.py --local --multi-agent --taxonomy ...` | Sistema de 8 agentes com análise crítica, síntese, revisão iterativa e debate |
 
 Opções adicionais:
-- `--profile 5090` — carrega `config_5090.yaml` (otimizado para GPUs de 32 GB)
+- `--profile 5090` — carrega `config_5090.yaml` (otimizado para GPUs de alto desempenho)
 - `--resume` — retoma da última execução salva
 - `--cpu` — força modo CPU
 
 ---
 
-## Diagrama de Fluxo
+## Diagrama de Fluxo — Pipeline Clássica
 
 ### Pipeline Online (7 estágios)
 
@@ -159,7 +202,7 @@ Opções adicionais:
 
 ---
 
-## Componentes Principais
+## Componentes Clássicos
 
 ### 1. Entrada e CLI — `main.py`
 
@@ -170,6 +213,7 @@ da linha de comando, carrega a configuração e delega ao orquestrador.
 |-----------|--------|
 | `--topic "..."` | Modo online (requer Ollama + internet) |
 | `--local` | Modo offline — artigos em `data/raw/` |
+| `--multi-agent` | Ativa o sistema multi-agente em vez do pipeline clássico |
 | `--taxonomy PATH` | Arquivo de taxonomia (JSON ou MD) |
 | `--profile 5090` | Carrega `config_5090.yaml` |
 | `--resume` | Retoma execução anterior |
@@ -178,16 +222,15 @@ da linha de comando, carrega a configuração e delega ao orquestrador.
 **Fluxo:**
 1. Resolve qual `config.yaml` usar (padrão / perfil / custom)
 2. Executa `check_system_capabilities()` (detecta PyTorch, CUDA, SentenceTransformers)
-3. Delega para `run_pipeline()` (online) ou `run_pipeline_local()` (local)
+3. Se `--multi-agent`: delega para `run_multi_agent_pipeline()` em `agents/pipeline.py`
+4. Caso contrário: delega para `run_pipeline()` (online) ou `run_pipeline_local()` (local)
 
 ---
 
 ### 2. Orquestrador — `orchestrator.py`
 
 **Responsabilidade:** Coordena a execução sequencial de todos os estágios
-do pipeline. Registra timing, estado intermediário e logs de auditoria.
-
-**Funções principais:**
+do pipeline clássico. Registra timing, estado intermediário e logs de auditoria.
 
 | Função | Descrição |
 |--------|-----------|
@@ -222,18 +265,12 @@ e retomada.
 **Responsabilidade:** Lê artigos de `data/raw/` em múltiplos formatos e os
 converte para `StudyRecord`. Também carrega a taxonomia.
 
-**Formatos suportados:**
-
 | Formato | Função | Detalhes |
 |---------|--------|----------|
 | `.txt` | `_load_txt_files()` | Um arquivo = um estudo. Metadados extraídos do nome do arquivo |
 | `.json` | `_load_json_file()` | Lista de objetos `{id, title, abstract, ...}` |
 | `.csv` | `_load_csv_file()` | Cabeçalhos: id, title, abstract, ... |
 | `.bib` | `_load_bib_file()` | BibTeX — extrai title, author, year, abstract |
-
-**Parser de metadados do nome de arquivo:**
-`_parse_filename_metadata("A._Saravanan_2019")` →
-`{'author': 'A. Saravanan', 'year': 2019}`
 
 **Taxonomia:** Suporta JSON e Markdown. Dois tipos:
 - **Outline** (`"type": "outline"`) — define capítulos/seções com prompts
@@ -247,26 +284,20 @@ converte para `StudyRecord`. Também carrega a taxonomia.
 
 **Responsabilidade:** Remove estudos duplicados antes da triagem.
 
-**Dois modos:**
-
 | Modo | Condição | Método |
 |------|----------|--------|
 | **Semântico** | SentenceTransformers disponível | Embeddings de título+abstract → similaridade cosseno > threshold |
 | **Exato** | Fallback | Títulos normalizados (lowercase, strip) |
 
-**Parâmetros (config):**
+**Parâmetros:**
 - `deduplication.model`: modelo de embedding (default: `all-MiniLM-L6-v2`)
 - `deduplication.similarity_threshold`: limiar de similaridade (default: `0.95`)
-
-Todas as decisões de deduplicação são registradas em `dedup_log` no SQLite.
 
 ---
 
 ### 6. Triagem — `screening.py`
 
 **Responsabilidade:** Decide quais estudos devem ser incluídos na revisão.
-
-**Dois modos:**
 
 | Modo | Função | Requer LLM? |
 |------|--------|-------------|
@@ -277,13 +308,6 @@ Todas as decisões de deduplicação são registradas em `dedup_log` no SQLite.
 1. **Pass 1:** Prompt com critérios PICO → JSON de decisão
 2. **Pass 2:** Filtragem por limiar de confiança
 
-**Limiares (config):**
-- `screening.threshold_include`: 0.75 (acima = incluído)
-- `screening.threshold_exclude`: 0.25 (abaixo = excluído)
-- Entre ambos = **ambíguo** (sinalizado para revisão humana)
-
-Registra decisões no SQLite e gera `prisma.json` (diagrama PRISMA).
-
 ---
 
 ### 7. Análise de Conteúdo — `content_analyzer.py`
@@ -292,18 +316,12 @@ Registra decisões no SQLite e gera `prisma.json` (diagrama PRISMA).
 estágios 3–6 em uma só chamada:
 
 1. **Chunking** — divide artigos em trechos semânticos sobrepostos
-   (`_chunk_text()`, max 400 tokens, overlap 50)
+   (`_chunk_text()`, max 600 tokens, overlap 100)
 2. **Embedding** — codifica chunks e prompts da taxonomia usando
-   SentenceTransformers
+   SentenceTransformers (`all-mpnet-base-v2`)
 3. **Tag Mapping** — calcula similaridade cosseno entre cada chunk e
    cada seção da taxonomia. Atribui as top-k tags
 4. **Coverage Report** — gera estatísticas de cobertura por seção
-
-**Parâmetros (config_5090):**
-- `content_analyzer.chunk_max_tokens`: 600
-- `content_analyzer.chunk_overlap`: 100
-- `content_analyzer.similarity_threshold`: 0.25
-- `content_analyzer.top_k_tags`: 5
 
 **Saída:** `(chunks: List[Chunk], tags: List[ChunkTag], coverage: dict)`
 
@@ -314,260 +332,549 @@ estágios 3–6 em uma só chamada:
 **Responsabilidade:** Cria uma estrutura de diretórios que espelha a
 taxonomia, com metadados de artigos relevantes por seção.
 
-**Hierarquia gerada:**
-```
-data/organized/
-  └── {capítulo}/
-      └── {seção}/
-          └── section_articles.json
-```
-
-Cada `section_articles.json` contém: PMID, autor, ano, citação formatada,
-similaridade máxima, quantidade de chunks e trecho representativo.
-
 ---
 
 ### 9. Escrita da Revisão — `review_writer.py`
 
-**Responsabilidade:** Componente mais complexo. Gera o texto da revisão
-para cada seção da taxonomia usando LLM com raciocínio encadeado.
+**Responsabilidade:** Gera o texto da revisão para cada seção da taxonomia
+usando LLM com raciocínio encadeado (usado pelo modo clássico e como backend
+pelo `WritingAgent` no modo multi-agente).
 
-**Pipeline multi-estágio por seção:**
-
+**Pipeline por seção:**
 ```
 Evidência → [Pré-Sumarização] → Escrita (chain-of-thought) → [Polimento]
 ```
-
-#### 9.1. Coleta de Evidência (`_gather_evidence`)
-Seleciona os top-k chunks mais relevantes para cada seção (por similaridade),
-formata com citação `(Autor, Ano)`.
-
-#### 9.2. Pré-Sumarização (opcional) (`_pre_summarize_evidence`)
-Quando `evidence_pre_summarize: true`, cada chunk é resumido em um *brief*
-estruturado antes de ser enviado ao prompt de escrita.
-
-#### 9.3. Escrita com Chain-of-Thought (`_SECTION_PROMPT`)
-Prompt de 3+1 estágios internos (invisíveis ao output):
-
-| Estágio | Descrição |
-|---------|-----------|
-| **Stage 1 — Author Analysis** | Identifica contribuição de cada autor |
-| **Stage 2 — Synthesis Map** | Mapeia consenso, divergências e lacunas |
-| **Stage 2.5 — Critical Analysis** | Qualifica resultados (laboratório vs. campo, escalabilidade, custo) |
-| **Stage 3 — Write Section** | Produz o texto final com regras rígidas |
 
 **Regras de escrita:**
 - Sujeito de cada frase = fenômeno/resultado, não o autor
 - Citações apenas parentéticas `(Autor, Ano)`
 - Proibidos conectores genéricos ("Além disso", "No entanto", etc.)
-- Transições narrativas substanivas
+- Transições narrativas substantivas
 - Terminologia consistente
-- Todo o texto no idioma configurado (`language`)
 - Linguagem de hedging para resultados não verificados em escala
-
-#### 9.4. Polimento (opcional) (`_POLISH_PROMPT`)
-Quando `two_pass_writing: true`, o rascunho passa por um segundo prompt
-focado em coerência, redundância e fluência.
-
-#### 9.5. Montagem do Documento (`_assemble_markdown`)
-Combina todas as seções em um documento Markdown estruturado com hierarquia
-de capítulos (`##`) e seções (`###`).
-
-**Paralelismo:** Suporta escrita paralela via `ThreadPoolExecutor`
-(configurável em `review_writer.parallel_workers`).
 
 ---
 
 ### 10. Pós-Processamento — `post_processor.py`
 
-**Responsabilidade:** Refina o documento gerado pelo `review_writer`,
-transformando parágrafos centrados em autores em uma narrativa acadêmica
-orientada por consenso.
+**Responsabilidade:** Refina o documento gerado, transformando parágrafos
+centrados em autores em uma narrativa acadêmica orientada por consenso.
 
-**Pipeline de refinamento:**
-
+**Pipeline:**
 ```
-v1 (review_writer) → Parse → Refine seções → Coerência por capítulo
-                                                    → Reassembly → Cleanup textual → v2
+v1 → Parse → Refine seções → Coerência por capítulo → Cleanup textual → v2
 ```
-
-#### 10.1. Parsing (`_split_sections`)
-Divide o Markdown em preamble + lista de `_Section` (heading, body, level,
-parent).
-
-#### 10.2. Refinamento por Seção (`_REFINE_PROMPT`)
-Cada seção é enviada ao LLM com 18 regras:
-- Reorganizar por tema (não por autor)
-- Explicitar consenso e divergência
-- Hedging para conclusões não verificadas
-- Eliminação de redundâncias
-- Transições narrativas
-- Terminologia consistente
-
-#### 10.3. Coerência por Capítulo (`_COHERENCE_PROMPT`)
-Agrupa seções pelo `##` heading (capítulo) e envia o texto completo do
-capítulo ao LLM para:
-- Remover informação redundante entre seções
-- Garantir transições lógicas
-- Unificar formatação de citações
-
-#### 10.4. Limpeza Textual Programática (`_textual_cleanup`)
-Função determinística (sem LLM) que aplica regex para:
-- Deduplicar citações dentro do mesmo grupo parentético
-- Remover frases em inglês isoladas em texto português
-- Normalizar erros ortográficos comuns ("catalise" → "catálise")
-- Remover linhas em branco excessivas
-- Remover frases meta ("This section discusses...")
 
 ---
 
-### 11. Extração de Dados — `extraction.py`
+### 11–18. Componentes Adicionais
 
-**Responsabilidade:** Extrai dados estruturados de cada
-estudo incluído (modo online e keyword).
+| # | Componente | Responsabilidade |
+|---|-----------|-----------------|
+| 11 | `extraction.py` | Extração estruturada de dados via LLM → `ExtractionResult` |
+| 12 | `risk_of_bias.py` | Avaliação de risco de viés em 5 domínios |
+| 13 | `synthesis.py` | Meta-análise (inverse-variance) ou síntese temática |
+| 14 | `manuscript.py` | Geração de manuscrito LaTeX via Jinja2 |
+| 15 | `md2latex.py` | Conversão Markdown → LaTeX |
+| 16 | `utils.py` | Config, LLM, DB, modelos Pydantic, check_system_capabilities |
+| 17 | `query_builder.py` | Geração PICO + query booleana (modo online) |
+| 18 | `retrieval.py` | Busca PubMed via NCBI Entrez |
 
-**Dados extraídos (via LLM → JSON):**
+---
+
+## Sistema Multi-Agente
+
+### Visão Geral do Sistema
+
+O sistema multi-agente é a evolução central do pipeline, substituindo a
+execução linear clássica por um sistema de **8 agentes especializados**
+coordenados por um `CoordinatorAgent`, comunicando-se via **mensagens
+tipadas** e compartilhando estado via um **Blackboard** (memória
+compartilhada).
+
+**Ativação:** `python src/main.py --local --multi-agent --profile 5090 --taxonomy config/biodiesel_prompts.json`
+
+**Vantagens sobre o pipeline clássico:**
+- **Análise crítica comparativa** — avalia robustez de claims com comparação
+  estruturada entre estudos (design, escala, resultados)
+- **Eliminação de redundância** — `ConceptRegistry` rastreia conceitos já
+  explicados; `ReviewAgent` valida redundância cross-section
+- **Síntese profunda** — tese falsificável por tema, lacunas agrupadas com
+  prioridade, agenda de pesquisa consolidada
+- **Iteração write→review** — loop de até N iterações com feedback
+  estruturado e threshold de qualidade
+- **Debate estruturado** — para temas controversos, advocacia pro/contra
+  seguida de síntese moderada
+- **Tabelas automáticas** — detecção de oportunidades de tabela comparativa
+  e geração em Markdown
+- **Modelos por agente** — cada agente pode usar um modelo LLM diferente
+  (ex: `qwen3:8b` para escrita, `mixtral:8x22b` para análise crítica)
+
+---
+
+### Arquitetura de Agentes
+
+Todos os agentes herdam de `BaseAgent` (`base_agent.py`), que fornece:
+
+```python
+class BaseAgent(ABC):
+    def __init__(self, name: str, cfg: Dict[str, Any]) -> None
+    def process(self, message: Message) -> AgentResult    # abstrato
+    def call_llm(self, prompt: str, model_override=None) -> str
+    def timed_process(self, message: Message) -> AgentResult
+```
+
+**Seleção de modelo por agente:**
+O `call_llm()` verifica `cfg.multi_agent.agent_models.<name>`. Se houver
+um override, usa esse modelo; senão, usa o modelo global (`llm.model`).
+
+```yaml
+# config_5090.yaml
+multi_agent:
+  agent_models:
+    extraction: ~                  # usa qwen3:8b (global)
+    mapping: ~                     # usa qwen3:8b (global)
+    critical: "mixtral:8x22b"      # raciocínio complexo
+    synthesis: "mixtral:8x22b"     # tese + lacunas + agenda
+    writing: ~                     # usa qwen3:8b (global)
+    review: ~                      # usa qwen3:8b (global)
+    debate: "mixtral:8x22b"        # raciocínio complexo
+```
+
+---
+
+### Protocolo de Mensagens
+
+A comunicação inter-agente usa a classe `Message`:
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `task` | `str` | Identificador da tarefa (`"extract"`, `"write_section"`, `"review"`, ...) |
+| `payload` | `Dict[str, Any]` | Dados da tarefa — conteúdo varia por agente |
+| `source` | `str` | Agente de origem (ou `"coordinator"`) |
+| `timestamp` | `str` | ISO-8601 |
+| `iteration` | `int` | Número da iteração atual (para loops write→review) |
+| `feedback` | `str` | Feedback da iteração anterior |
+
+**Retorno padronizado** (`AgentResult`):
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `success` | `bool` | Se o agente completou sem erros fatais |
+| `data` | `Dict[str, Any]` | Output específico do agente |
+| `errors` | `List[str]` | Mensagens de erro |
+| `metrics` | `Dict[str, float]` | Métricas de desempenho (`elapsed_s`, etc.) |
+
+---
+
+### Blackboard — Memória Compartilhada
+
+O `Blackboard` (`blackboard.py`) é o estado compartilhado entre todos os
+agentes. Ele armazena:
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `extractions` | `Dict[str, ExtractionResult]` | Dados extraídos por PMID |
+| `synthesis_maps` | `Dict[str, SynthesisMap]` | Mapa de consenso/contradição/lacunas por tema |
+| `chapter_theses` | `Dict[str, str]` | Tese de cada capítulo/seção |
+| `section_drafts` | `Dict[str, List[str]]` | Histórico de rascunhos por seção |
+| `approved_sections` | `Dict[str, str]` | Seções aprovadas pelo ReviewAgent |
+| `review_scores` | `Dict[str, float]` | Nota da última revisão por seção |
+| `debate_sections` | `Dict[str, str]` | Seções de debate geradas |
+| `concept_registry` | `ConceptRegistry` | Registro de conceitos já explicados |
+| `research_agenda` | `List[Dict]` | Agenda consolidada de pesquisa |
+| `table_count` | `int` | Número de tabelas geradas |
+
+**Persistência:** Os métodos `save()` e `load()` serializam o blackboard em
+JSON, incluindo o `ConceptRegistry` (exportado via `to_json()`).
+
+---
+
+### Coordinator Agent
+
+**Arquivo:** `coordinator_agent.py`
+**Responsabilidade:** Orquestra a execução dos 8 agentes em **6 fases**
+(com sub-fases).
+
+#### Fases de Execução
+
+| Fase | Nome | Agente | Descrição |
+|------|------|--------|-----------|
+| **1** | Extraction | `ExtractionAgent` | Extrai dados PICO + metadados críticos de cada estudo |
+| **2** | Mapping | `MappingAgent` | Mapeia evidências para seções da taxonomia |
+| **3** | Theme Loop | Múltiplos | Para **cada tema** da taxonomia: |
+| 3a | Critical Analysis | `CriticalAgent` | Análise crítica com comparação estruturada |
+| 3b | Synthesis | `SynthesisAgent` | Gera tese + lacunas agrupadas |
+| 3c | Write | `WritingAgent` | Escreve seção com `ConceptRegistry` |
+| 3d | Review | `ReviewAgent` | Avalia qualidade + redundância cross-section |
+| 3c-d | *Loop* | Write + Review | Itera até `quality_threshold` (default: 7.0) ou `max_iterations` (default: 3) |
+| **3.5** | Table Detection | (interno) | Detecta oportunidades de tabela comparativa por tema |
+| **3.6** | Agenda Consolidation | `SynthesisAgent` | Consolida lacunas de todos os temas em agenda final |
+| **4** | Debate (opcional) | `DebateAgent` | Se houver temas com >N contradições e robustez baixa |
+| **5** | Formatting | `FormattingAgent` | Monta documento final + tabelas + agenda de pesquisa |
+
+#### Mecanismos Internos do Coordinator
+
+**ConceptRegistry Integration:**
+Após cada seção ser aprovada, o coordinator registra os conceitos cobertos
+no `ConceptRegistry`. Na próxima seção, os conceitos já registrados são
+enviados ao `WritingAgent` com informação de onde foram introduzidos:
+```
+"catálise heterogênea (ver: Alkaline Catalysis)"
+```
+
+**Build Approved Summary:**
+O método `_build_approved_summary()` gera resumos de até 300 caracteres de
+cada seção aprovada, que são passados ao `ReviewAgent` para validação de
+redundância cross-section.
+
+**Table Detection:**
+O método `_detect_tables_for_themes()` usa `table_generator.detect_table_opportunity()`
+para identificar temas com dados quantitativos comparáveis e gerar
+`TableSpec` objects, registrados no `TableRegistry`.
+
+---
+
+### Extraction Agent
+
+**Arquivo:** `extraction_agent.py`
+**Modelo:** `qwen3:8b` (padrão)
+
+Extrai dados estruturados de cada estudo via LLM → JSON → `ExtractionResult`.
+
+**Campos extraídos:**
 `study_design`, `sample_size`, `population`, `intervention`, `comparison`,
-`outcome`, `effect_size`, `ci_lower`, `ci_upper`, `p_value`, `notes`
+`outcome`, `effect_size`, `ci_lower`, `ci_upper`, `p_value`, `notes`,
+`study_scale`, `geographic_scope`, `funding_source`, `conflict_of_interest`,
+`limitations`
 
-Validados contra o schema Pydantic `ExtractionResult`.
-
----
-
-### 12. Avaliação de Risco de Viés — `risk_of_bias.py`
-
-**Responsabilidade:** Avalia cada estudo em 5 domínios de viés (modo online).
-
-| Domínio | Rating |
-|---------|--------|
-| Selection | low / unclear / high |
-| Performance | low / unclear / high |
-| Detection | low / unclear / high |
-| Attrition | low / unclear / high |
-| Reporting | low / unclear / high |
-
-Fallback: se o parse do JSON falhar, todos os domínios recebem "unclear".
+**Tolerância a nulls:** Um `@model_validator` converte automaticamente
+campos `None` (retornados pelo LLM) em strings vazias.
 
 ---
 
-### 13. Síntese — `synthesis.py`
+### Mapping Agent
 
-**Responsabilidade:** Combina os dados extraídos em uma síntese quantitativa
-ou qualitativa.
+**Arquivo:** `mapping_agent.py`
+**Modelo:** `qwen3:8b` (padrão)
 
-| Tipo | Condição | Método |
-|------|----------|--------|
-| **Meta-análise** | ≥ 3 estudos com `effect_size` + CIs | Inverse-variance weighting, Cochran's Q, I², τ² |
-| **Temática** | Insuficiente dados numéricos | LLM identifica temas e gera síntese narrativa |
-
-**Saídas:**
-- `meta_analysis.json` — efeito poolado, IC, heterogeneidade
-- `forest_plot.png` — gráfico forest plot (matplotlib)
-- `thematic_analysis.json` — síntese temática
+Mapeia estudos extraídos para seções da taxonomia usando a evidência
+pré-mapeada (chunk→tag). Gera o `SynthesisMap` por tema usando o
+`evidence_synthesizer`.
 
 ---
 
-### 14. Geração de Manuscrito — `manuscript.py`
+### Critical Agent
 
-**Responsabilidade:** Gera um manuscrito LaTeX completo com 4 seções
-(Introduction, Methods, Results, Discussion), cada uma produzida por um
-prompt LLM especializado que recebe dados concretos.
+**Arquivo:** `critical_agent.py`
+**Modelo:** `mixtral:8x22b` (complexo)
 
-Usa **Jinja2** com delimitadores customizados (`<<`, `>>`, `<%`, `%>`) para
-renderizar o template `manuscript.tex.jinja`.
+Produz uma análise crítica **estruturada** para cada tema com os seguintes
+componentes:
+
+| Componente | Descrição |
+|-----------|-----------|
+| **Methodological Quality** | Avaliação de design, tamanho amostral, reprodutibilidade |
+| **Contradictions** | Identificação de resultados contraditórios com causa possível |
+| **Comparative Analysis** | Comparação estruturada entre 2–4 estudos principais |
+| **Robustness Rating** | Classificação: `alta`, `média` ou `baixa` |
+| **Contextual Factors** | Influência de geografia, financiamento, escala |
+
+**Análise Comparativa (novo):**
+Para cada par de estudos comparado, o agente produz um `ComparativeItem`:
+```json
+{
+  "study_a": "...", "study_b": "...",
+  "methodology_diff": "lab-scale com KOH vs. pilot-scale com NaOH",
+  "result_diff": "98% rendimento vs. 82% rendimento",
+  "possible_cause": "concentração de catalisador e tempo de reação diferentes",
+  "robustness_note": "moderate — poucos estudos corroborando"
+}
+```
+
+**Janela de evidência:** Top 20 tags mais relevantes por tema (ampliado de 15).
 
 ---
 
-### 15. Conversão Markdown→LaTeX — `md2latex.py`
+### Synthesis Agent
 
-**Responsabilidade:** Converte o documento Markdown gerado pelo
-review_writer/post_processor em LaTeX.
+**Arquivo:** `synthesis_agent.py`
+**Modelo:** `mixtral:8x22b` (complexo)
 
-**Conversões:**
-- `#` → `\section`, `##` → `\subsection`, `###` → `\subsubsection`
-- `**bold**` → `\textbf{}`, `*italic*` → `\textit{}`
-- Listas com `- ` → `\begin{itemize}`
-- Escape de caracteres especiais LaTeX (`&`, `%`, `$`, `#`, `_`, etc.)
-- Detecção e exclusão de seção "Referências"
+Produz dois outputs fundamentais:
 
-Suporta idiomas (`pt` → `brazilian`, `en` → `english`) via pacote `babel`.
+#### 1. Tese + Lacunas Agrupadas (por tema)
+O prompt produz um JSON com:
+- **Thesis:** Declaração falsificável de 1-2 sentenças
+- **Grouped Gaps:** Lacunas organizadas por grupo temático, cada uma com
+  prioridade (`alta`/`média`) e justificativa
+- **Research Priorities:** 3-5 prioridades ordenadas por importância
 
-Executável como CLI: `python src/md2latex.py input.md -o output.tex`
+```json
+{
+  "thesis": "Embora a catálise alcalina domine...",
+  "grouped_gaps": [
+    {
+      "group": "Escalabilidade",
+      "gaps": [
+        {"description": "...", "priority": "alta", "justification": "..."}
+      ]
+    }
+  ],
+  "research_priorities": ["...", "..."]
+}
+```
+
+#### 2. Consolidação de Agenda (cross-tema)
+O método `consolidate_agenda()` recebe **todas** as lacunas de todos os
+temas e usa um prompt dedicado (`_AGENDA_PROMPT`) para:
+- Deduplicar lacunas semanticamente equivalentes
+- Priorizar por impacto científico
+- Gerar uma agenda final de até 30 itens
 
 ---
 
-### 16. Utilitários — `utils.py`
+### Writing Agent
 
-**Responsabilidade:** Módulo compartilhado com infraestrutura transversal.
+**Arquivo:** `writing_agent.py`
+**Modelo:** `qwen3:8b` (padrão)
 
-#### Funções de Infra
+Escreve cada seção da revisão usando:
+1. **Evidência** coletada por `_gather_evidence()` do `review_writer.py`
+2. **Conceitos cobertos** do `ConceptRegistry` com indicação da seção
+   onde foram introduzidos
+3. **Tese** e `SynthesisMap` do tema
+
+**Anti-redundância:**
+Quando o `ConceptRegistry` fornece dados estruturados, o agente gera
+strings como:
+```
+"Já cobertos: catálise heterogênea (ver: Alkaline Catalysis), esterificação (ver: Acid Process)"
+```
+Isso instrui o LLM a referenciar — não re-explicar — esses conceitos.
+
+---
+
+### Review Agent
+
+**Arquivo:** `review_agent.py`
+**Modelo:** `qwen3:8b` (padrão)
+
+Avalia cada seção em **6 critérios** (escala 1-10):
+
+| # | Critério | Descrição |
+|---|---------|-----------|
+| 1 | Thesis Clarity | Clareza e presença da tese |
+| 2 | Redundancy | Repetições internas na seção |
+| 3 | **Cross-Section Redundancy** | Sobreposição com seções já aprovadas |
+| 4 | Citation Usage | Uso correto e consistente de citações |
+| 5 | Hedging | Linguagem de hedging apropriada |
+| 6 | Critical Depth | Análise além de mera descrição |
+
+**Cross-Section Redundancy (novo):**
+O coordinator passa ao reviewer um resumo das seções já aprovadas
+(`approved_sections_summary`). O reviewer verifica se a seção atual
+repete explicações ou conceitos já cobertos em outras seções, listando
+os overlaps específicos encontrados.
+
+**Output JSON:**
+```json
+{
+  "thesis_clarity": {"score": 8.0, "comment": "..."},
+  "redundancy": {"score": 7.5, "comment": "..."},
+  "cross_section_redundancy": {"score": 9.0, "comment": "..."},
+  "citation_usage": {"score": 8.0, "comment": "..."},
+  "hedging": {"score": 7.0, "comment": "..."},
+  "critical_depth": {"score": 6.5, "comment": "..."},
+  "overall_score": 7.5,
+  "overall_feedback": "Sugestões específicas..."
+}
+```
+
+**Loop iterativo:** Se `overall_score < quality_threshold` (default 7.0),
+o coordinator re-envia a seção ao `WritingAgent` com o feedback como
+contexto, até `max_iterations` (default 3).
+
+---
+
+### Debate Agent
+
+**Arquivo:** `debate_agent.py`
+**Modelo:** `mixtral:8x22b` (complexo)
+
+Ativado quando um tema tem:
+- Robustez ≤ `"média"` na análise crítica
+- Número de contradições ≥ `debate_controversy_threshold` (default: 2)
+
+**Fluxo:**
+1. **Position A (Supportive):** LLM argumenta que os resultados são
+   positivos e as contradições são explicáveis por condições experimentais
+2. **Position B (Critical):** LLM argumenta que a metodologia é inadequada
+   e as contradições minam as conclusões
+3. **Moderator Synthesis:** LLM modera o debate, produzindo 3-4 parágrafos
+   balanceados com perspectivas justas, explicações das contradições e
+   lacunas a resolver
+
+O resultado é inserido como subseção `#### Debate: {tema}` na seção aprovada.
+
+---
+
+### Formatting Agent
+
+**Arquivo:** `formatting_agent.py`
+**Modelo:** `qwen3:8b` (padrão)
+
+Responsável pela montagem final do documento:
+
+1. **Assemblagem Markdown:** Combina todas as seções aprovadas em documento
+   estruturado via `_assemble_markdown()` do `review_writer.py`
+2. **Pós-processamento:** Aplica o pipeline completo de refinamento
+   (`_refine_section`, `_check_chapter_coherence`, `_dedup_chapters`,
+   `_validate_argumentation`, `_textual_cleanup`)
+3. **Agenda de Pesquisa (novo):** Insere a seção
+   `## Agenda de Pesquisas Futuras` com lacunas agrupadas por prioridade
+   (Alta / Média), cada uma com abordagem sugerida
+4. **Tabelas:** Log de tabelas incluídas no documento
+
+---
+
+### Módulos de Suporte
+
+#### `concept_registry.py` — Registro Anti-Redundância
+
+Registra conceitos já explicados na revisão, thread-safe, com normalização
+Unicode para matching fuzzy:
+
+| Método | Descrição |
+|--------|-----------|
+| `register(concept, section)` | Marca conceito como coberto na seção |
+| `register_many(concepts, section)` | Registra lista de conceitos |
+| `already_covered(concept)` | Verifica se conceito já foi coberto |
+| `get_covered_concepts()` | Lista de conceitos (originais, sorted) |
+| `get_covered_with_sections()` | Lista `[{concept, section}]` |
+| `to_json(path)` / `from_json(path)` | Persistência |
+
+**Normalização:** lowercase → strip accents (NFD) → collapse whitespace
+```python
+"Catálise Heterogênea" → "catalise heterogenea"
+```
+
+#### `evidence_synthesizer.py` — Análise de Consenso
+
+Analisa chunks tagados por tema e produz um `SynthesisMap`:
+
+| Componente | Modelo Pydantic | Campos |
+|-----------|----------------|--------|
+| Consensus | `ConsensusPoint` | `statement`, `supporting_studies`, `strength` |
+| Contradiction | `Contradiction` | `point`, `study_a/b`, `finding_a/b`, `possible_reason` |
+| Gap | `KnowledgeGap` | `description`, `priority`, `suggested_approach` |
+
+#### `table_generator.py` — Tabelas Comparativas Automáticas
+
+Detecta oportunidades de tabelas comparativas e gera Markdown:
 
 | Função | Descrição |
 |--------|-----------|
-| `load_config(path)` | Carrega YAML e injeta `config_hash` |
-| `setup_logging(cfg)` | Configura logging (arquivo + console) |
-| `call_llm(prompt, cfg)` | Envia prompt ao Ollama via `/api/generate` (streaming) |
-| `get_db_connection(cfg)` | Retorna conexão SQLite |
-| `init_database(cfg)` | Cria schema (tabelas) se não existirem |
-| `save_json(data, path)` / `load_json(path)` | I/O JSON |
-| `_resolve(rel)` | Resolve caminho relativo ao projeto |
-| `check_system_capabilities(cfg)` | Detecta PyTorch, CUDA, GPU e SentenceTransformers |
+| `detect_table_opportunity()` | LLM analisa evidência e decide se tabela é apropriada |
+| `generate_markdown_table()` | Converte `TableSpec` em Markdown formatado |
+| `TableRegistry.register()` | Registra tabela gerada |
+| `TableRegistry.replace_markers()` | Substitui marcadores `[TABLE: id]` no texto |
 
-#### Comunicação com LLM (`call_llm`)
-
-- Endpoint: `POST {base_url}/api/generate` (streaming)
-- Timeout: `connect=30s`, `read=cfg[llm.timeout]` (gap entre chunks)
-- Parâmetros opcionais passados: `temperature`, `seed`, `num_ctx`, `top_p`,
-  `repeat_penalty`
-- Retry com backoff em 500/502/503/504
-
-#### Modelos de Dados (Pydantic)
-
-| Modelo | Descrição |
-|--------|-----------|
-| `PICOModel` | Pergunta PICO estruturada |
-| `StudyRecord` | Um registro bibliográfico (PMID, título, abstract, DOI, ...) |
-| `ScreeningDecision` | Decisão de triagem (incluir/excluir + confiança) |
-| `ExtractionResult` | Dados extraídos (design, amostra, efeito, IC, p) |
-| `RiskOfBiasItem` | Avaliação de um domínio de viés |
-| `RiskOfBiasResult` | Conjunto de 5 domínios para um estudo |
-| `TaxonomyEntry` | Uma entrada da taxonomia (prompt, folder, parent) |
-| `Chunk` | Trecho semântico de um artigo |
-| `ChunkTag` | Mapeamento chunk → seção da taxonomia (com similaridade) |
-
-#### Schema do Banco SQLite
-
-Tabelas: `raw_studies`, `screening_log`, `dedup_log`, `extraction_log`,
-`pipeline_runs`.
+**Critérios de detecção:**
+- Múltiplos estudos reportando a mesma métrica
+- Comparações entre catalisadores, matérias-primas, temperaturas
+- Dados numéricos que beneficiam apresentação lado a lado
 
 ---
 
-### 17. Construção de Query — `query_builder.py`
+### Diagrama de Fluxo — Multi-Agente
 
-**Responsabilidade:** Gera a pergunta PICO e uma query booleana para PubMed
-a partir de um tópico em texto livre (modo online).
-
-**Fluxo:**
-1. Prompt ao LLM pedindo JSON com `{population, intervention, comparison,
-   outcome, query}`
-2. Parse com fallback: JSON direto → regex → texto bruto
-3. Persiste em `pico.json`
+```
+                    ┌──────────────────────────────────────────────────┐
+                    │           PIPELINE PRÉ-PROCESSAMENTO            │
+                    │  Load → Dedup → PDF Convert → Content Analysis  │
+                    └──────────────────────┬───────────────────────────┘
+                                           │
+                                           ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        COORDINATOR AGENT                                    │
+│                                                                             │
+│   Phase 1: ExtractionAgent ─────────────────────────────────────────────── │
+│   │  Extrai PICO + metadados de cada estudo                                │
+│   ▼                                                                         │
+│   Phase 2: MappingAgent ────────────────────────────────────────────────── │
+│   │  Mapeia evidências → SynthesisMap por tema                             │
+│   ▼                                                                         │
+│   Phase 3: Theme Loop (para cada tema) ─────────────────────────────────── │
+│   │                                                                         │
+│   │  ┌──────────────┐    ┌───────────────┐    ┌──────────────────┐        │
+│   │  │ 3a. Critical │───▶│ 3b. Synthesis │───▶│ 3c. Write        │        │
+│   │  │   Agent      │    │    Agent      │    │    Agent         │        │
+│   │  │ (comparativa)│    │ (tese+gaps)   │    │ (ConceptRegistry)│        │
+│   │  └──────────────┘    └───────────────┘    └────────┬─────────┘        │
+│   │                                                     │                   │
+│   │                                           ┌─────────▼─────────┐        │
+│   │                                           │ 3d. Review Agent  │        │
+│   │                                           │ (6 critérios +    │        │
+│   │                                           │  cross-section)   │        │
+│   │                                           └─────────┬─────────┘        │
+│   │                                                     │                   │
+│   │                                    score ≥ 7.0? ────┤                   │
+│   │                                    ┌──YES──┐   ┌──NO──┐                │
+│   │                                    │Approve│   │Retry │                │
+│   │                                    │+ Reg. │   │(→3c) │                │
+│   │                                    └───────┘   └──────┘                │
+│   │                                                                         │
+│   Phase 3.5: Table Detection ─────────────────────────────────────────── │
+│   │  Detecta oportunidades de tabela comparativa por tema                  │
+│   ▼                                                                         │
+│   Phase 3.6: Agenda Consolidation ────────────────────────────────────── │
+│   │  SynthesisAgent consolida lacunas de todos os temas                    │
+│   ▼                                                                         │
+│   Phase 4: DebateAgent (opcional) ────────────────────────────────────── │
+│   │  Debate pro/contra + síntese moderada para temas controversos          │
+│   ▼                                                                         │
+│   Phase 5: FormattingAgent ──────────────────────────────────────────── │
+│      Montagem final + pós-processamento + agenda + tabelas                 │
+│                                                                             │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+                        systematic_review.md
+                     (+ agenda de pesquisa + tabelas)
+```
 
 ---
 
-### 18. Recuperação do PubMed — `retrieval.py`
+### Estado Compartilhado — Fluxo de Dados
 
-**Responsabilidade:** Busca artigos no PubMed usando a API NCBI Entrez
-(modo online).
-
-**Fluxo:**
-1. `Entrez.esearch()` → lista de PMIDs
-2. `Entrez.efetch()` em lotes → XML → parse para `StudyRecord`
-3. Persiste cada registro no SQLite e salva log em `retrieval_log.json`
-
-**Parâmetros:**
-- `retrieval.max_results`: máximo de IDs (default: 500, 5090: 2000)
-- `retrieval.batch_size`: IDs por chamada efetch (default: 50, 5090: 100)
+```
+                    ┌─────────────┐
+                    │  Blackboard │
+                    ├─────────────┤
+  ExtractionAgent ─▶│ extractions │
+                    │             │
+    MappingAgent ──▶│ synthesis_  │
+                    │    maps     │
+                    │             │
+  SynthesisAgent ──▶│ chapter_    │──▶ WritingAgent
+                    │    theses   │
+                    │             │
+                    │ concept_    │◀── CoordinatorAgent
+                    │    registry │──▶ WritingAgent
+                    │             │
+    ReviewAgent ───▶│ approved_   │──▶ FormattingAgent
+                    │    sections │
+                    │             │
+    ReviewAgent ───▶│ review_     │──▶ CoordinatorAgent (loop decision)
+                    │    scores   │
+                    │             │
+  SynthesisAgent ──▶│ research_   │──▶ FormattingAgent
+                    │    agenda   │
+                    │             │
+  CoordinatorAgent ▶│ table_count │──▶ FormattingAgent
+                    └─────────────┘
+```
 
 ---
 
@@ -588,19 +895,23 @@ O sistema é parametrizado por arquivos YAML em `config/`.
 
 ### `config_5090.yaml` — Perfil de Alto Desempenho
 
-Otimizado para 32 GB VRAM:
+Otimizado para GPU de alto desempenho:
 
-| Diferença | Padrão → 5090 |
-|-----------|---------------|
-| Modelo LLM | `qwen2.5:14b` → `gemma3:4b` |
-| Contexto | (padrão) → `32768` tokens |
-| Timeout | 120s → 900s |
-| Embedding | `all-MiniLM-L6-v2` → `all-mpnet-base-v2` |
-| Chunks | 400 tokens → 600 tokens |
-| Evidência top-k | 10 → 25 |
-| Paralelismo | 1 → 3 workers |
-| Two-pass writing | false → true |
-| Pré-sumarização | false → true |
+| Parâmetro | Valor |
+|-----------|-------|
+| Modelo global | `qwen3:8b` |
+| Modelos complexos | `mixtral:8x22b` (critical, synthesis, debate) |
+| Contexto | `32768` tokens |
+| Timeout | 900s |
+| Embedding | `all-mpnet-base-v2` |
+| Chunks | 600 tokens, overlap 100 |
+| Evidência top-k | 25 |
+| Paralelismo | 3 workers |
+| Two-pass writing | `true` |
+| Pré-sumarização | `true` |
+| Quality threshold | 7.0 |
+| Max iterations | 3 |
+| Debate | enabled, threshold 2 contradições |
 
 ---
 
@@ -613,27 +924,54 @@ StudyRecord ──▶ Chunk ──▶ ChunkTag
      │              TaxonomyEntry
      │              (prompt, folder, parent)
      │
+     ├──▶ ExtractionResult ──────────────▶ CriticalAnalysis
+     │      (+study_scale, geographic_      (+comparative_analysis:
+     │       scope, funding_source,          [ComparativeItem])
+     │       conflict_of_interest,
+     │       limitations)
+     │
      ├──▶ ScreeningDecision
-     ├──▶ ExtractionResult ──▶ Synthesis
-     └──▶ RiskOfBiasResult
-                                  │
-                                  ▼
-                           Manuscript (LaTeX)
+     ├──▶ RiskOfBiasResult
+     │
+     └──▶ SynthesisMap ──▶ ConsensusPoint
+              │          ──▶ Contradiction
+              │          ──▶ KnowledgeGap
+              │
+              └──▶ Thesis + Grouped Gaps ──▶ Research Agenda
 ```
+
+**Modelos Pydantic do sistema multi-agente (em `agents/models.py`):**
+
+| Modelo | Campos Principais |
+|--------|------------------|
+| `CriticalAnalysis` | `methodological_quality_summary`, `contradictions`, `comparative_analysis`, `robustness_rating`, `contextual_factors` |
+| `ComparativeItem` | `study_a`, `study_b`, `methodology_diff`, `result_diff`, `possible_cause`, `robustness_note` |
+| `ContradictionDetail` | `point`, `study_a`, `finding_a`, `study_b`, `finding_b`, `possible_cause` |
 
 ---
 
 ## Sistema de Qualidade Textual
 
-A qualidade do texto gerado é garantida por **5 camadas**:
+A qualidade do texto gerado é garantida por **7 camadas** (expandido no
+modo multi-agente):
 
-| Camada | Componente | Tipo |
-|--------|-----------|------|
-| **1. Chain-of-Thought** | `_SECTION_PROMPT` (Stages 1–3) | Prompt LLM |
-| **2. Two-Pass Writing** | `_POLISH_PROMPT` | Prompt LLM |
-| **3. Refinamento** | `_REFINE_PROMPT` | Prompt LLM |
-| **4. Coerência** | `_COHERENCE_PROMPT` | Prompt LLM |
-| **5. Cleanup** | `_textual_cleanup()` | Regex/Programático |
+| # | Camada | Componente | Tipo |
+|---|--------|-----------|------|
+| 1 | Chain-of-Thought | `_SECTION_PROMPT` (Stages 1–3) | Prompt LLM |
+| 2 | Two-Pass Writing | `_POLISH_PROMPT` | Prompt LLM |
+| 3 | **Review Agent** | 6 critérios + cross-section redundancy | Prompt LLM (iterativo) |
+| 4 | Refinamento | `_REFINE_PROMPT` (post-processing) | Prompt LLM |
+| 5 | Coerência | `_COHERENCE_PROMPT` (por capítulo) | Prompt LLM |
+| 6 | Argumentation | `_validate_argumentation` (tese → seção) | Prompt LLM |
+| 7 | Cleanup | `_textual_cleanup()` | Regex/Programático |
+
+### Anti-Redundância (3 níveis)
+
+| Nível | Mecanismo | Escopo |
+|-------|----------|--------|
+| **1. ConceptRegistry** | Rastreia conceitos cobertos + seção de origem | Cross-section (escrita) |
+| **2. Cross-section Review** | Resumos de seções aprovadas → ReviewAgent | Cross-section (revisão) |
+| **3. Post-processing Dedup** | `_dedup_chapters()` programático | Cross-chapter (final) |
 
 ### Regras transversais (presentes em todos os prompts):
 - ❌ Conectores genéricos ("Além disso", "No entanto", "Adicionalmente")
@@ -642,5 +980,5 @@ A qualidade do texto gerado é garantida por **5 camadas**:
 - ❌ Erros ortográficos ("catalise" → "catálise")
 - ✅ Transições narrativas substantivas
 - ✅ Linguagem de hedging para resultados preliminares
-- ✅ Análise crítica (laboratório vs. campo, escalabilidade)
+- ✅ Análise crítica comparativa (laboratório vs. campo, escalabilidade)
 - ✅ Terminologia consistente

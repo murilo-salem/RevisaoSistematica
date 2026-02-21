@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # ------------------------------------------------------------------ #
 #  Path helpers                                                        #
@@ -320,6 +320,21 @@ class ExtractionResult(BaseModel):
     funding_source: str = ""       # funding body, if disclosed
     conflict_of_interest: str = "" # COI statement, if disclosed
     limitations: str = ""          # key limitations noted by the authors
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_none_strings(cls, values: Any) -> Any:
+        """Coerce None values to empty strings for optional text fields."""
+        if isinstance(values, dict):
+            str_fields = [
+                "study_design", "population", "intervention", "comparison",
+                "outcome", "notes", "study_scale", "geographic_scope",
+                "funding_source", "conflict_of_interest", "limitations",
+            ]
+            for f in str_fields:
+                if f in values and values[f] is None:
+                    values[f] = ""
+        return values
 
 
 class RiskOfBiasItem(BaseModel):
