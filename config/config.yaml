@@ -1,0 +1,92 @@
+# ============================================================
+# Systematic Review Pipeline — Central Configuration
+# ============================================================
+# Every parameter that governs pipeline behaviour lives here.
+# Change values here instead of editing source code.
+# ============================================================
+
+# ------ LLM Settings ------
+llm:
+  provider: ollama                    # ollama | llamacpp
+  base_url: "http://localhost:11434"  # Ollama API endpoint
+  model: "qwen2.5:14b"
+  temperature: 0.2
+  seed: 42
+  timeout: 120                        # seconds per request
+
+# ------ PubMed / Entrez Retrieval ------
+retrieval:
+  email: "your_email@example.com"     # REQUIRED by NCBI
+  api_key: ""                         # optional NCBI API key
+  max_results: 500
+  batch_size: 50                      # IDs per efetch call
+  db: "pubmed"
+
+# ------ Deduplication ------
+deduplication:
+  model: "all-MiniLM-L6-v2"
+  similarity_threshold: 0.95
+
+# ------ Screening ------
+screening:
+  threshold_include: 0.75
+  threshold_exclude: 0.25
+
+# ------ Routing Guardrails ------
+routing:
+  guardrails_enabled: true
+  strictness_default: "hard"         # soft | hard
+  min_eligibility_score: 0.2
+  scope_filter_enabled: true
+  scope_min_positive_score: 2
+  scope_max_negative_without_anchor: 2
+  scope_max_negative_with_anchor: 6
+
+# ------ Deterministic Validators ------
+validators:
+  enabled: true
+  exclude_high_flagged_evidence: true
+  max_high_flags_per_section: 0
+
+# ------ Synthesis ------
+synthesis:
+  min_studies_for_meta: 3             # minimum to attempt meta-analysis
+  confidence_level: 0.95
+
+# ------ Paths (relative to project root) ------
+paths:
+  database: "data/raw/studies.db"
+  prisma: "data/results/prisma.json"
+  extracted: "data/processed/extracted_data.json"
+  risk_of_bias: "data/processed/risk_of_bias.json"
+  pico: "data/processed/pico.json"
+  manuscript: "data/results/manuscript.tex"
+  audit_log: "data/results/audit.log"
+  pipeline_state: "data/results/pipeline_state.json"
+  forest_plot: "data/results/forest_plot.png"
+
+# ------ Review Writer ------
+review_writer:
+  top_k_evidence: 10
+  min_required_evidence: 3
+  parallel_workers: 1
+  max_retries: 1
+  language: "pt"                      # Output language: "pt", "en", or "es"
+  evidence_pre_summarize: false       # Set true for higher quality (more LLM calls)
+  drop_presummary_parse_failures: true
+  presummary_min_confidence: 0.6
+  relevance_judge_model: ""           # Optional model override for pre-summary relevance judge
+  concept_extractor_model: ""         # Optional model override for concept extraction
+  two_pass_writing: false             # Set true for draft→polish pipeline
+
+# ------ Post-Processing Synthesis Refinement ------
+post_processing:
+  enabled: true                        # set false to skip refinement
+  parallel_workers: 1                  # parallelism (match Ollama capacity)
+  max_retries: 1
+  preserve_v1: true                    # keep v1 backup file
+
+# ------ Versioning / Reproducibility ------
+version:
+  pipeline: "1.2.0"
+  config_hash: ""                     # auto-filled at runtime

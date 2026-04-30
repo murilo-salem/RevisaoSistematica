@@ -1,0 +1,34 @@
+{
+    "topic": "Efeito do exercício físico na depressão em idosos",
+    "pico": {
+        "population": "Idosos (≥60 anos) com diagnóstico de depressão",
+        "intervention": "Exercício físico (aeróbico, resistência, misto)",
+        "comparison": "Sem exercício, tratamento usual, placebo",
+        "outcome": "Redução de sintomas depressivos (escalas validadas)"
+    },
+    "keywords": [
+        "exercise",
+        "physical activity",
+        "depression",
+        "depressive symptoms",
+        "older adults",
+        "elderly"
+    ],
+    "inclusion_criteria": [
+        "Ensaio clínico randomizado (RCT)",
+        "Participantes com idade ≥ 60 anos",
+        "Intervenção envolve exercício físico estruturado"
+    ],
+    "exclusion_criteria": [
+        "Estudos observacionais sem grupo controle",
+        "Populações mistas"
+    ],
+    "classification_rules": {
+        "include_if_any": [
+            "O estudo avalia exercício como intervenção principal"
+        ],
+        "exclude_if_any": [
+            "O estudo não inclui grupo controle"
+        ]
+    }
+}

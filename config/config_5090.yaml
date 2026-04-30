@@ -1,0 +1,90 @@
+llm:
+  provider: ollama
+  base_url: http://localhost:11434
+  model: qwen2.5:14b
+  temperature: 0.2
+  seed: 42
+  timeout: 900
+  num_ctx: 32768
+  top_p: 0.9
+  repeat_penalty: 1.15
+retrieval:
+  email: your_email@example.com
+  api_key: ''
+  max_results: 2000
+  batch_size: 100
+  db: pubmed
+deduplication:
+  model: all-mpnet-base-v2
+  similarity_threshold: 0.95
+content_analyzer:
+  model: all-mpnet-base-v2
+  chunk_max_tokens: 600
+  chunk_overlap: 100
+  similarity_threshold: 0.1
+  top_k_tags: 16
+  embedding_batch_size: 256
+review_writer:
+  top_k_evidence: 25
+  min_required_evidence: 0
+  parallel_workers: 3
+  max_retries: 2
+  language: pt
+  evidence_pre_summarize: false
+  drop_presummary_parse_failures: false
+  presummary_min_confidence: 0.4
+  relevance_judge_model: ''
+  concept_extractor_model: ''
+  two_pass_writing: true
+post_processing:
+  enabled: true
+  parallel_workers: 3
+  max_retries: 2
+  preserve_v1: true
+screening:
+  threshold_include: 0.75
+  threshold_exclude: 0.25
+routing:
+  guardrails_enabled: false
+  strictness_default: hard
+  min_eligibility_score: 0.05
+  scope_filter_enabled: true
+  scope_min_positive_score: 1
+  scope_max_negative_without_anchor: 6
+  scope_max_negative_with_anchor: 12
+validators:
+  enabled: true
+  exclude_high_flagged_evidence: false
+  max_high_flags_per_section: 0
+synthesis:
+  min_studies_for_meta: 3
+  confidence_level: 0.95
+paths:
+  database: data/raw/studies.db
+  prisma: data/results/prisma.json
+  extracted: data/processed/extracted_data.json
+  risk_of_bias: data/processed/risk_of_bias.json
+  pico: data/processed/pico.json
+  manuscript: data/results/manuscript.tex
+  audit_log: data/results/audit.log
+  pipeline_state: data/results/pipeline_state.json
+  forest_plot: data/results/forest_plot.png
+multi_agent:
+  enabled: false
+  max_iterations: 3
+  quality_threshold: 7.0
+  parallel_themes: 2
+  write_retries: 1
+  debate_enabled: true
+  debate_controversy_threshold: 2
+  agent_models:
+    extraction: null
+    mapping: null
+    critical: qwen2.5:14b
+    synthesis: qwen2.5:14b
+    writing: null
+    review: null
+    debate: qwen2.5:14b
+version:
+  pipeline: 1.3.0
+  config_hash: ''

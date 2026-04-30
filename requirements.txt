@@ -1,0 +1,15 @@
+pandas
+numpy
+scikit-learn
+sentence-transformers
+faiss-cpu
+requests
+pydantic
+jinja2
+matplotlib
+scipy
+tqdm
+pyyaml
+biopython
+PyMuPDF
+pdfminer.six
